@@ -54,6 +54,12 @@ public interface IDataGridColumn<TData> where TData : class
     public string? Width { get; }
 
     /// <summary>
+    /// Gets whether the column should size itself to its widest rendered content. Auto-sized
+    /// columns are measured after rendering and are not user-resizable. Default is false.
+    /// </summary>
+    public bool AutoSize => false;
+
+    /// <summary>
     /// Gets whether the user can toggle this column's visibility via a column chooser.
     /// Default is true. Set to false for columns that must always be visible (e.g., selection columns).
     /// </summary>

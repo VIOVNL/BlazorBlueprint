@@ -93,6 +93,13 @@
     public PositioningStrategy Strategy { get; set; } = PositioningStrategy.Absolute;
 
     /// <summary>
+    /// Whether positioning may flip the floating content to the opposite side when space is
+    /// limited. Default is true.
+    /// </summary>
+    [Parameter]
+    public bool Flip { get; set; } = true;
+
+    /// <summary>
     /// CSS z-index value for the floating content.
     /// Default is 50.
     /// </summary>
@@ -348,7 +355,7 @@
                 Offset = Offset,
                 MatchReferenceWidth = MatchAnchorWidth,
                 Strategy = Strategy,
-                Flip = true,  // Enable flip to opposite side when not enough space
+                Flip = Flip,
                 Shift = true  // Enable shift to keep in viewport
             };
 

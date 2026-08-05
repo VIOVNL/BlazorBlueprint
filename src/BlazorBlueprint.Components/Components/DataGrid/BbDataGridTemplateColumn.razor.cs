@@ -114,6 +114,13 @@ public partial class BbDataGridTemplateColumn<TData> : ComponentBase, IDataGridC
     public string? Width { get; set; }
 
     /// <summary>
+    /// Whether this column should size itself to its widest rendered content. Use this for compact
+    /// command or status columns whose width depends on their rendered template. Default is false.
+    /// </summary>
+    [Parameter]
+    public bool AutoSize { get; set; }
+
+    /// <summary>
     /// Whether the user can toggle this column's visibility via a column chooser. Default is true.
     /// </summary>
     [Parameter]
@@ -231,7 +238,9 @@ public partial class BbDataGridTemplateColumn<TData> : ComponentBase, IDataGridC
 
     bool IDataGridColumn<TData>.Hideable => Hideable;
 
-    bool IDataGridColumn<TData>.Resizable => Resizable;
+    bool IDataGridColumn<TData>.Resizable => Resizable && !AutoSize;
+
+    bool IDataGridColumn<TData>.AutoSize => AutoSize;
 
     bool IDataGridColumn<TData>.Reorderable => Reorderable && Pinned == ColumnPinning.None;
 

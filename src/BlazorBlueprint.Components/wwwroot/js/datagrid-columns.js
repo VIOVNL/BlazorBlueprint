@@ -18,13 +18,40 @@ function getOrCreateState(gridId) {
       // Reorder state
       reorderEnabled: false,
       reorderDelegationSetup: false,
+      reorderTable: null,
+      reorderHandlers: null,
       reorderableIds: new Set(),
       dragColumnId: null,
       dragTh: null,
-      dropIndicator: null
+      dropIndicator: null,
+      dropTargetTh: null,
+      // Content-based sizing state
+      autoSizeIds: new Set(),
+      autoSizeObserver: null,
+      autoSizeFrame: 0
     });
   }
   return gridStates.get(gridId);
+}
+
+/**
+ * Calculates the table and flexible-column widths for a resize gesture. Shrinking a column
+ * transfers the released space to another flexible data column until the table reaches its
+ * viewport width. Growing a column expands the table and enables horizontal scrolling.
+ */
+export function calculateResizeLayout(
+  totalWidth,
+  startWidth,
+  newWidth,
+  minimumTableWidth,
+  initialFillWidth
+) {
+  const resizedTotal = totalWidth - startWidth + newWidth;
+  const tableWidth = Math.max(minimumTableWidth, resizedTotal);
+  return {
+    tableWidth,
+    fillWidth: initialFillWidth + tableWidth - resizedTotal
+  };
 }
 
 // ─── Column Resize ──────────────────────────────────────────────────────────
@@ -82,18 +109,15 @@ export function setupResizeHandles(gridId) {
       const cols = table.querySelectorAll('colgroup col');
 
       let totalWidth = 0;
+      const initialWidths = [];
       ths.forEach((th, i) => {
         const w = Math.round(th.getBoundingClientRect().width);
         if (cols[i]) {
           cols[i].style.width = w + 'px';
         }
         totalWidth += w;
+        initialWidths.push(w);
       });
-
-      // Lock the table width to the sum of column widths.
-      // This prevents table-fixed + width:100% from proportionally
-      // scaling other columns when one is resized.
-      table.style.width = totalWidth + 'px';
 
       // Find the active column index
       const thIndex = ths.findIndex(th => th.getAttribute('data-column-id') === columnId);
@@ -102,6 +126,35 @@ export function setupResizeHandles(gridId) {
         : 150;
       const activeCol = thIndex >= 0 ? cols[thIndex] : null;
       const startX = e.clientX;
+      const tableViewport = table.parentElement?.clientWidth ||
+        state.containerElement.clientWidth || totalWidth;
+      const minimumTableWidth = Math.min(totalWidth, tableViewport);
+      const fillColumnIndex = ths.findLastIndex((th, i) =>
+        i !== thIndex &&
+        th.getAttribute('data-pinned') !== 'true' &&
+        th.getAttribute('data-auto-size') !== 'true' &&
+        th.querySelector('[data-resize-handle]'));
+
+      const applyWidths = (newWidth) => {
+        const layout = calculateResizeLayout(
+          totalWidth,
+          startWidth,
+          newWidth,
+          fillColumnIndex >= 0 ? minimumTableWidth : 0,
+          fillColumnIndex >= 0 ? initialWidths[fillColumnIndex] : 0);
+
+        if (fillColumnIndex >= 0 && cols[fillColumnIndex]) {
+          cols[fillColumnIndex].style.width = Math.round(layout.fillWidth) + 'px';
+        }
+        if (activeCol) {
+          activeCol.style.width = newWidth + 'px';
+        }
+        table.style.width = Math.round(layout.tableWidth) + 'px';
+      };
+
+      // Freeze the measured layout before dragging. Non-resizable, pinned, and auto-sized
+      // columns are never selected as the flexible recipient, so their widths remain exact.
+      applyWidths(startWidth);
 
       state.isDragging = true;
 
@@ -113,11 +166,7 @@ export function setupResizeHandles(gridId) {
         moveEvt.preventDefault();
         const delta = moveEvt.clientX - startX;
         const newWidth = Math.max(state.minWidth, Math.round(startWidth + delta));
-        if (activeCol) {
-          activeCol.style.width = newWidth + 'px';
-          // Update table width to match the new total
-          table.style.width = (totalWidth - startWidth + newWidth) + 'px';
-        }
+        applyWidths(newWidth);
       };
 
       const onEnd = (endEvt) => {
@@ -137,7 +186,7 @@ export function setupResizeHandles(gridId) {
         const widths = {};
         ths.forEach((th, i) => {
           const id = th.getAttribute('data-column-id');
-          if (id && cols[i]) {
+          if (id && cols[i] && th.getAttribute('data-auto-size') !== 'true') {
             widths[id] = parseFloat(cols[i].style.width) || th.getBoundingClientRect().width;
           }
         });
@@ -175,12 +224,43 @@ export function initColumnReorder(containerElement, dotNetRef, gridId) {
   if (!state.dropIndicator) {
     const indicator = document.createElement('div');
     indicator.style.cssText =
-      'position:absolute;width:2px;background:hsl(var(--primary));' +
+      'position:absolute;width:4px;background:var(--ring);' +
+      'box-shadow:0 0 0 1px var(--background);border-radius:9999px;' +
       'top:0;bottom:0;pointer-events:none;z-index:50;display:none;';
     containerElement.style.position = 'relative';
     containerElement.appendChild(indicator);
     state.dropIndicator = indicator;
   }
+}
+
+function clearDropIndicator(state) {
+  if (state.dropTargetTh) {
+    state.dropTargetTh.removeAttribute('data-drop-position');
+    state.dropTargetTh = null;
+  }
+  if (state.dropIndicator) {
+    state.dropIndicator.style.display = 'none';
+  }
+}
+
+function clearDragState(state) {
+  if (state.dragTh) {
+    state.dragTh.style.opacity = '';
+  }
+  state.dragColumnId = null;
+  state.dragTh = null;
+  clearDropIndicator(state);
+}
+
+function detachReorderHandlers(state) {
+  if (!state.reorderTable || !state.reorderHandlers) return;
+
+  for (const [eventName, handler] of Object.entries(state.reorderHandlers)) {
+    state.reorderTable.removeEventListener(eventName, handler);
+  }
+  state.reorderTable = null;
+  state.reorderHandlers = null;
+  state.reorderDelegationSetup = false;
 }
 
 /**
@@ -198,15 +278,18 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
   // Always update the set of reorderable column IDs
   state.reorderableIds = new Set(reorderableColumnIds);
 
-  // Set up event delegation once on the table
-  if (state.reorderDelegationSetup) return;
-
   const table = state.containerElement.querySelector('table');
   if (!table) return;
 
-  state.reorderDelegationSetup = true;
+  // Blazor can replace the table while retaining the component instance. Rebind event
+  // delegation whenever that happens instead of leaving listeners on a detached table.
+  if (state.reorderTable === table && state.reorderDelegationSetup) return;
+  detachReorderHandlers(state);
 
-  table.addEventListener('dragstart', (e) => {
+  state.reorderDelegationSetup = true;
+  state.reorderTable = table;
+
+  const onDragStart = (e) => {
     const th = e.target.closest('th[data-column-id]');
     if (!th) return;
 
@@ -214,7 +297,7 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
     if (!state.reorderableIds.has(columnId)) return;
 
     // Don't start drag if a resize is in progress
-    if (state.isDragging) {
+    if (state.isDragging || e.target.closest('[data-resize-handle],button,a,input,select,textarea')) {
       e.preventDefault();
       return;
     }
@@ -236,10 +319,10 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
         `left:${rect.left}px;top:${rect.top}px;` +
         `width:${rect.width}px;height:${rect.height}px;` +
         `display:flex;align-items:center;padding:0 16px;` +
-        `background:hsl(var(--background));` +
-        `border:1px solid hsl(var(--border));border-radius:6px;` +
+        `background:var(--background);` +
+        `border:1px solid var(--border);border-radius:6px;` +
         `box-shadow:0 4px 12px rgba(0,0,0,0.15);` +
-        `font-size:14px;font-weight:500;color:hsl(var(--foreground));` +
+        `font-size:14px;font-weight:500;color:var(--foreground);` +
         `opacity:0.9;pointer-events:none;z-index:9999;`;
       document.body.appendChild(ghost);
 
@@ -259,20 +342,11 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
     }
 
     th.style.opacity = '0.4';
-  });
+  };
 
-  table.addEventListener('dragend', () => {
-    if (state.dragTh) {
-      state.dragTh.style.opacity = '';
-    }
-    state.dragColumnId = null;
-    state.dragTh = null;
-    if (state.dropIndicator) {
-      state.dropIndicator.style.display = 'none';
-    }
-  });
+  const onDragEnd = () => clearDragState(state);
 
-  table.addEventListener('dragover', (e) => {
+  const onDragOver = (e) => {
     if (!state.dragColumnId) return;
 
     const th = e.target.closest('th[data-column-id]');
@@ -294,33 +368,36 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
     const containerRect = state.containerElement.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
     const indicatorX = e.clientX < midX
-      ? rect.left - containerRect.left
-      : rect.right - containerRect.left;
+      ? rect.left - containerRect.left + state.containerElement.scrollLeft
+      : rect.right - containerRect.left + state.containerElement.scrollLeft;
+
+    if (state.dropTargetTh && state.dropTargetTh !== th) {
+      state.dropTargetTh.removeAttribute('data-drop-position');
+    }
+    state.dropTargetTh = th;
+    th.setAttribute('data-drop-position', e.clientX < midX ? 'before' : 'after');
 
     if (state.dropIndicator) {
       state.dropIndicator.style.display = 'block';
       state.dropIndicator.style.left = indicatorX + 'px';
-      state.dropIndicator.style.top = (rect.top - containerRect.top) + 'px';
+      state.dropIndicator.style.top =
+        (rect.top - containerRect.top + state.containerElement.scrollTop) + 'px';
       state.dropIndicator.style.height = rect.height + 'px';
     }
-  });
+  };
 
-  table.addEventListener('dragleave', (e) => {
+  const onDragLeave = (e) => {
     // Only hide indicator when leaving the table entirely
     if (!e.relatedTarget || !table.contains(e.relatedTarget)) {
-      if (state.dropIndicator) {
-        state.dropIndicator.style.display = 'none';
-      }
+      clearDropIndicator(state);
     }
-  });
+  };
 
-  table.addEventListener('drop', (e) => {
+  const onDrop = (e) => {
     if (!state.dragColumnId) return;
 
     e.preventDefault();
-    if (state.dropIndicator) {
-      state.dropIndicator.style.display = 'none';
-    }
+    clearDropIndicator(state);
 
     const th = e.target.closest('th[data-column-id]');
     if (!th) return;
@@ -348,7 +425,119 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
 
     // Don't null dragColumnId/dragTh here — dragend always fires after drop
     // and handles cleanup + opacity reset.
+  };
+
+  state.reorderHandlers = {
+    dragstart: onDragStart,
+    dragend: onDragEnd,
+    dragover: onDragOver,
+    dragleave: onDragLeave,
+    drop: onDrop
+  };
+  for (const [eventName, handler] of Object.entries(state.reorderHandlers)) {
+    table.addEventListener(eventName, handler);
+  }
+}
+
+// ─── Content-based Column Sizing ───────────────────────────────────────────
+
+export function initColumnAutoSize(containerElement, gridId) {
+  if (!containerElement) return;
+
+  const state = getOrCreateState(gridId);
+  state.containerElement = containerElement;
+
+  if (!state.autoSizeObserver) {
+    state.autoSizeObserver = new ResizeObserver(() => scheduleAutoSize(state));
+    state.autoSizeObserver.observe(containerElement);
+  }
+}
+
+export function setupAutoSizeColumns(gridId, columnIds) {
+  const state = gridStates.get(gridId);
+  if (!state || !state.containerElement) return;
+
+  state.autoSizeIds = new Set(columnIds || []);
+  scheduleAutoSize(state);
+}
+
+function scheduleAutoSize(state) {
+  if (state.autoSizeFrame) cancelAnimationFrame(state.autoSizeFrame);
+  state.autoSizeFrame = requestAnimationFrame(() => {
+    state.autoSizeFrame = 0;
+    applyAutoSize(state);
   });
+}
+
+function measureRenderedContentWidth(cell) {
+  const cellStyle = getComputedStyle(cell);
+  const chromeWidth =
+    parseFloat(cellStyle.paddingLeft) +
+    parseFloat(cellStyle.paddingRight) +
+    parseFloat(cellStyle.borderLeftWidth) +
+    parseFloat(cellStyle.borderRightWidth);
+  const root = cell.children.length === 1 ? cell.children[0] : cell;
+  const children = Array.from(root.children).filter(child => {
+    const style = getComputedStyle(child);
+    return style.display !== 'none' && style.position !== 'absolute';
+  });
+
+  if (!children.length) {
+    return Math.ceil(root.getBoundingClientRect().width + chromeWidth);
+  }
+
+  const rects = children.map(child => child.getBoundingClientRect());
+  const left = Math.min(...rects.map(rect => rect.left));
+  const right = Math.max(...rects.map(rect => rect.right));
+  return Math.ceil(right - left + chromeWidth);
+}
+
+function applyAutoSize(state) {
+  if (!state.autoSizeIds.size || state.isDragging) return;
+
+  const table = state.containerElement.querySelector('table');
+  if (!table) return;
+
+  const ths = Array.from(table.querySelectorAll('thead th[data-column-id]'));
+  const cols = Array.from(table.querySelectorAll('colgroup col'));
+  if (!ths.length || ths.length !== cols.length) return;
+
+  const widths = ths.map((th) => Math.ceil(th.getBoundingClientRect().width));
+  for (const columnId of state.autoSizeIds) {
+    const index = ths.findIndex(th => th.getAttribute('data-column-id') === columnId);
+    if (index < 0) continue;
+
+    const cells = table.querySelectorAll(`[data-column-id="${CSS.escape(columnId)}"]`);
+    let contentWidth = 0;
+    for (const cell of cells) {
+      contentWidth = Math.max(contentWidth, measureRenderedContentWidth(cell));
+    }
+    widths[index] = Math.max(1, contentWidth);
+  }
+
+  const viewportWidth = table.parentElement?.clientWidth || state.containerElement.clientWidth || 0;
+  let totalWidth = widths.reduce((sum, width) => sum + width, 0);
+  if (totalWidth < viewportWidth) {
+    const fillIndex = ths.findLastIndex(th =>
+      th.getAttribute('data-pinned') !== 'true' &&
+      th.getAttribute('data-auto-size') !== 'true' &&
+      th.querySelector('[data-resize-handle]'));
+    if (fillIndex >= 0) {
+      widths[fillIndex] += viewportWidth - totalWidth;
+      totalWidth = viewportWidth;
+    }
+  }
+
+  widths.forEach((width, index) => {
+    const pixelWidth = `${Math.ceil(width)}px`;
+    if (cols[index].style.width !== pixelWidth) {
+      cols[index].style.width = pixelWidth;
+    }
+  });
+  const tableWidth = `${Math.ceil(Math.max(totalWidth, viewportWidth))}px`;
+  if (table.style.width !== tableWidth) {
+    table.style.width = tableWidth;
+  }
 }
 
 // ─── Disposal ───────────────────────────────────────────────────────────────
@@ -360,6 +549,14 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
 export function dispose(gridId) {
   const state = gridStates.get(gridId);
   if (!state) return;
+
+  detachReorderHandlers(state);
+  clearDragState(state);
+
+  if (state.autoSizeFrame) {
+    cancelAnimationFrame(state.autoSizeFrame);
+  }
+  state.autoSizeObserver?.disconnect();
 
   // Cleanup reorder indicator
   if (state.dropIndicator && state.dropIndicator.parentNode) {

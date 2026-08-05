@@ -81,7 +81,14 @@
     {
         if (IsSortable && Context != null)
         {
-            Context.ToggleSort(ColumnId!, multiSort: e.CtrlKey || e.MetaKey);
+            if (e.CtrlKey || e.MetaKey)
+            {
+                Context.ToggleSort(ColumnId!, multiSort: true);
+            }
+            else
+            {
+                Context.TogglePrimarySort(ColumnId!);
+            }
         }
     }
 
@@ -89,7 +96,14 @@
     {
         if (IsSortable && Context != null && (e.Key == "Enter" || e.Key == " "))
         {
-            Context.ToggleSort(ColumnId!, multiSort: e.CtrlKey || e.MetaKey);
+            if (e.CtrlKey || e.MetaKey)
+            {
+                Context.ToggleSort(ColumnId!, multiSort: true);
+            }
+            else
+            {
+                Context.TogglePrimarySort(ColumnId!);
+            }
         }
     }
 

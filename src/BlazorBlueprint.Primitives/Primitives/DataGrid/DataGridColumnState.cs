@@ -20,11 +20,22 @@ public class DataGridColumnState
     /// <param name="columns">The column IDs and their initial visibility.</param>
     public void Initialize(IEnumerable<(string ColumnId, bool Visible)> columns)
     {
-        var activeIds = new HashSet<string>();
-        var order = 0;
-        foreach (var (id, visible) in columns)
+        var declaredColumns = columns
+            .GroupBy(column => column.ColumnId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+        var activeIds = declaredColumns
+            .Select(column => column.ColumnId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // A state may already contain a restored snapshot when the grid's column components
+        // register. Preserve that saved order, visibility, and width. Initialization only removes
+        // stale entries and adds declarations that are genuinely new.
+        entries.RemoveAll(entry => !activeIds.Contains(entry.ColumnId));
+
+        var nextOrder = entries.Count == 0 ? 0 : entries.Max(entry => entry.Order) + 1;
+        foreach (var (id, visible) in declaredColumns)
         {
-            activeIds.Add(id);
             var existing = entries.FirstOrDefault(e => e.ColumnId == id);
             if (existing == null)
             {
@@ -32,19 +43,10 @@ public class DataGridColumnState
                 {
                     ColumnId = id,
                     Visible = visible,
-                    Order = order
+                    Order = nextOrder++
                 });
             }
-            else
-            {
-                existing.Order = order;
-            }
-
-            order++;
         }
-
-        // Remove entries for columns that no longer exist (e.g., from stale persisted state)
-        entries.RemoveAll(e => !activeIds.Contains(e.ColumnId));
 
         NormalizeOrders();
     }

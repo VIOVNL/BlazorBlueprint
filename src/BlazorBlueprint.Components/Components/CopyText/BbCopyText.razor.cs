@@ -107,25 +107,13 @@ public partial class BbCopyText : ComponentBase, IAsyncDisposable
         "pointer-events-none inline-flex items-center gap-1.5 whitespace-nowrap " +
         "rounded-md border bg-popover px-2.5 py-1 text-xs font-medium shadow-md";
 
-    private void HandleMouseEnter()
-    {
-        ShowTooltip();
-    }
+    private void HandleMouseEnter() => ShowTooltip();
 
-    private void HandleMouseLeave()
-    {
-        isHovered = false;
-    }
+    private void HandleMouseLeave() => isHovered = false;
 
-    private void HandleFocus()
-    {
-        ShowTooltip();
-    }
+    private void HandleFocus() => ShowTooltip();
 
-    private void HandleBlur()
-    {
-        isHovered = false;
-    }
+    private void HandleBlur() => isHovered = false;
 
     private void ShowTooltip()
     {

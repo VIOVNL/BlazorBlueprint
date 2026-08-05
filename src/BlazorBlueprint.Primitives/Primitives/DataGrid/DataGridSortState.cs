@@ -70,6 +70,50 @@ public class DataGridSortState
     }
 
     /// <summary>
+    /// Makes a column the primary sort while preserving the other active sorts as tie-breakers.
+    /// A secondary sort is promoted without changing its direction. The current primary sort
+    /// cycles through ascending, descending, and off.
+    /// </summary>
+    /// <param name="columnId">The ID of the column to make primary.</param>
+    public void TogglePrimarySort(string columnId)
+    {
+        if (string.IsNullOrWhiteSpace(columnId))
+        {
+            throw new ArgumentException("Column ID cannot be null or whitespace.", nameof(columnId));
+        }
+
+        var existingIndex = definitions.FindIndex(definition => definition.ColumnId == columnId);
+        if (existingIndex == 0)
+        {
+            var primary = definitions[0];
+            if (primary.Direction == SortDirection.Ascending)
+            {
+                primary.Direction = SortDirection.Descending;
+            }
+            else
+            {
+                definitions.RemoveAt(0);
+            }
+
+            return;
+        }
+
+        if (existingIndex > 0)
+        {
+            var existing = definitions[existingIndex];
+            definitions.RemoveAt(existingIndex);
+            definitions.Insert(0, existing);
+            return;
+        }
+
+        definitions.Insert(0, new SortDefinition
+        {
+            ColumnId = columnId,
+            Direction = SortDirection.Ascending
+        });
+    }
+
+    /// <summary>
     /// Sets a single sort definition, replacing all existing definitions.
     /// </summary>
     /// <param name="columnId">The ID of the column to sort.</param>

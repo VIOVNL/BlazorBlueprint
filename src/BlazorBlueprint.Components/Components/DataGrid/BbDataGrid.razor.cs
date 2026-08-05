@@ -794,7 +794,12 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
             StateHasChanged();
         }
 
-        if (!Resizable && !Reorderable)
+        var autoSizeColumnIds = GetVisibleColumns()
+            .Where(column => column.AutoSize)
+            .Select(column => column.ColumnId)
+            .ToArray();
+
+        if (!Resizable && !Reorderable && autoSizeColumnIds.Length == 0)
         {
             return;
         }
@@ -817,6 +822,7 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
                 {
                     await columnsModule.InvokeVoidAsync("initColumnReorder", containerRef, selfRef, gridId);
                 }
+
             }
 
             if (jsInitialized)
@@ -834,6 +840,14 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
                         .ToArray();
                     await columnsModule!.InvokeVoidAsync("setupDraggableHeaders", gridId, reorderableIds);
                 }
+
+
+                if (autoSizeColumnIds.Length > 0)
+                {
+                    await columnsModule!.InvokeVoidAsync("initColumnAutoSize", containerRef, gridId);
+                }
+
+                await columnsModule!.InvokeVoidAsync("setupAutoSizeColumns", gridId, autoSizeColumnIds);
             }
         }
         catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
@@ -850,34 +864,22 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
     /// Registers a column definition from a child column component.
     /// Called during the child's OnInitialized.
     /// </summary>
-    internal void RegisterColumn<TProp>(BbDataGridPropertyColumn<TData, TProp> column)
-    {
-        AddColumn(column);
-    }
+    internal void RegisterColumn<TProp>(BbDataGridPropertyColumn<TData, TProp> column) => AddColumn(column);
 
     /// <summary>
     /// Registers a template column.
     /// </summary>
-    internal void RegisterColumn(BbDataGridTemplateColumn<TData> column)
-    {
-        AddColumn(column);
-    }
+    internal void RegisterColumn(BbDataGridTemplateColumn<TData> column) => AddColumn(column);
 
     /// <summary>
     /// Registers a select column. Always laid out first, ahead of every data column.
     /// </summary>
-    internal void RegisterColumn(BbDataGridSelectColumn<TData> column)
-    {
-        AddColumn(column);
-    }
+    internal void RegisterColumn(BbDataGridSelectColumn<TData> column) => AddColumn(column);
 
     /// <summary>
     /// Registers a hierarchy column (which also acts as a property column with expand/collapse).
     /// </summary>
-    internal void RegisterHierarchyColumnDef(IDataGridColumn<TData> column)
-    {
-        AddColumn(column);
-    }
+    internal void RegisterHierarchyColumnDef(IDataGridColumn<TData> column) => AddColumn(column);
 
     /// <summary>
     /// Registers an expand column. Laid out after the select column (if present),
@@ -3239,7 +3241,7 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
     };
 
     private bool HasTableFixed() =>
-        Resizable || _columns.Any(c => c.Pinned != ColumnPinning.None);
+        Resizable || _columns.Any(c => c.Pinned != ColumnPinning.None || c.AutoSize);
 
     /// <summary>
     /// Computes the accessible name for a column's header cell, returning null when the cell

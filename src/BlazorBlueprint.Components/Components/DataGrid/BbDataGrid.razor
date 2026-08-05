@@ -68,7 +68,9 @@
                         <colgroup>
                             @foreach (var col in _cachedVisibleColumns)
                             {
-                                <col style="@GetColumnWidthStyle(col)" />
+                                <col style="@GetColumnWidthStyle(col)"
+                                     data-column-id="@col.ColumnId"
+                                     data-auto-size="@(col.AutoSize ? "true" : null)" />
                             }
                         </colgroup>
                     }
@@ -92,7 +94,8 @@
                                     AriaLabel="@GetHeaderAriaLabel(column)"
                                     Class="@GetHeaderCellClass(column, isSelectColumn, isExpandColumn, isLastLeft, isFirstRight)"
                                     style="@GetColumnStyle(column, _cachedVisibleColumns)"
-                                    data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)">
+                                    data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)"
+                                    data-auto-size="@(column.AutoSize ? "true" : null)">
                                     @if (isExpandColumn)
                                     {
                                         @* Empty spacer — no header control for expand column *@
@@ -137,11 +140,13 @@
                                     }
                                     else
                                     {
-                                        @if (Reorderable && column.Reorderable)
-                                        {
-                                            <LucideIcon Name="grip-vertical" Class="absolute left-1 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/40 opacity-0 group-hover/header:opacity-100 transition-opacity pointer-events-none" />
-                                        }
                                         <div class="flex items-center gap-2">
+                                            @if (Reorderable && column.Reorderable)
+                                            {
+                                                <LucideIcon Name="grip-vertical"
+                                                           Class="h-4 w-4 shrink-0 cursor-grab text-muted-foreground/60 transition-opacity group-hover/header:opacity-100"
+                                                           aria-hidden="true" />
+                                            }
                                             @if (ShowExpandAll && isHierarchyColumn)
                                             {
                                                 <button type="button"
@@ -461,7 +466,9 @@
                     @key="@column.ColumnId"
                     Class="@GetCellClass(column, isSelectColumn, isExpandColumn, isLastLeft, isFirstRight, item)"
                     style="@pinnedStyle"
-                    data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)">
+                    data-column-id="@column.ColumnId"
+                    data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)"
+                    data-auto-size="@(column.AutoSize ? "true" : null)">
                     @if (isExpandColumn)
                     {
                         @if (DetailTemplate != null || HasDetailRows)
@@ -646,7 +653,9 @@
                     @key="@column.ColumnId"
                     Class="@GetCellClass(column, isSelectColumn, isExpandColumn, isLastLeft, isFirstRight, item)"
                     style="@pinnedStyle"
-                    data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)">
+                    data-column-id="@column.ColumnId"
+                    data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)"
+                    data-auto-size="@(column.AutoSize ? "true" : null)">
                     @if (isSelectColumn)
                     {
                         <div @onclick:stopPropagation="true">
