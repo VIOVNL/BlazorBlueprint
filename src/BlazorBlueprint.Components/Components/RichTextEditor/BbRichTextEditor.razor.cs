@@ -90,6 +90,20 @@ public partial class BbRichTextEditor : ComponentBase, IAsyncDisposable
     [Parameter]
     public RenderFragment? ToolbarContent { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether Shift+Enter inserts a preserved inline line break.
+    /// This behavior is opt-in to preserve the default editor behavior for existing consumers.
+    /// </summary>
+    [Parameter]
+    public bool EnableSoftBreaks { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether pasted non-breaking spaces are normalized to regular spaces.
+    /// This behavior is opt-in to preserve the default editor behavior for existing consumers.
+    /// </summary>
+    [Parameter]
+    public bool NormalizePastedText { get; set; }
+
     // === Parameters - Appearance ===
 
     /// <summary>
@@ -712,7 +726,9 @@ public partial class BbRichTextEditor : ComponentBase, IAsyncDisposable
     private object BuildEditorOptions() => new
     {
         placeholder = Placeholder ?? "",
-        readOnly = Disabled || ReadOnly
+        readOnly = Disabled || ReadOnly,
+        enableSoftBreaks = EnableSoftBreaks,
+        normalizePastedText = NormalizePastedText
     };
 
     // === CSS Classes ===
