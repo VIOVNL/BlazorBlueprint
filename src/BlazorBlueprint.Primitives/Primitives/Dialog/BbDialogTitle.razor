@@ -15,8 +15,9 @@
     {
         builder.OpenElement(0, As);
         builder.AddAttribute(1, "id", Context.TitleId);
-        builder.AddMultipleAttributes(2, AdditionalAttributes);
-        builder.AddContent(3, ChildContent);
+        builder.AddAttribute(2, "data-slot", "dialog-title");
+        builder.AddMultipleAttributes(3, AdditionalAttributes);
+        builder.AddContent(4, ChildContent);
         builder.CloseElement();
     };
 

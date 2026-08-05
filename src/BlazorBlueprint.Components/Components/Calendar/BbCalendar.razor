@@ -9,12 +9,12 @@
     Calendar component - displays a month view with selectable dates.
 *@
 
-<div class="@CssClass" @attributes="AdditionalAttributes">
+<div data-slot="calendar" class="@CssClass" @attributes="AdditionalAttributes">
     @* Calendar Header with Navigation *@
-    <div class="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-        <div class="space-y-4">
+    <div data-slot="calendar-months" class="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
+        <div data-slot="calendar-month" class="space-y-4">
             @* Month/Year Navigation *@
-            <div class="flex items-center justify-between pt-1">
+            <div data-slot="calendar-navigation" class="flex items-center justify-between pt-1">
                 <BbButton Variant="ButtonVariant.Outline"
                         Size="ButtonSize.Icon"
                         Class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
@@ -66,35 +66,38 @@
             </div>
 
             @* Calendar Grid *@
-            <table class="w-full border-collapse space-y-1" role="grid"
+            <table data-slot="calendar-table" class="w-full border-collapse space-y-1" role="grid"
                    @onkeydown="HandleKeyDown"
                    @onkeydown:preventDefault="@ShouldPreventKeyDefault">
-                <thead>
-                    <tr class="flex">
+                <thead data-slot="calendar-weekdays">
+                    <tr data-slot="calendar-weekday-row" class="flex">
                         @foreach (var dayName in DayNames)
                         {
-                            <th scope="col" class="text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]">
+                            <th data-slot="calendar-weekday" scope="col" class="text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]">
                                 @dayName
                             </th>
                         }
                     </tr>
                 </thead>
-                <tbody>
+                <tbody data-slot="calendar-weeks">
                     @foreach (var week in GetWeeksInMonth())
                     {
-                        <tr class="flex w-full mt-2">
+                        <tr data-slot="calendar-week" class="flex w-full mt-2">
                             @foreach (var day in week)
                             {
                                 var isSelected = day.HasValue && Selected.HasValue && day.Value.Date == Selected.Value.Date;
                                 var isOutside = day.HasValue && (day.Value.Month != DisplayDate.Month || day.Value.Year != DisplayDate.Year);
                                 var isDisabled = day.HasValue && IsDisabled(day.Value);
                                 var isFocused = day.HasValue && _focusedDate.HasValue && day.Value.Date == _focusedDate.Value.Date;
-                                <td class="@GetCellClasses(day, isSelected)"
+                                <td data-slot="calendar-cell"
+                                    data-selected="@isSelected.ToString().ToLowerInvariant()"
+                                    class="@GetCellClasses(day, isSelected)"
                                     role="gridcell"
                                     aria-selected="@isSelected">
                                     @if (day.HasValue)
                                     {
                                         <button type="button"
+                                                data-slot="calendar-day"
                                                 id="@GetDayId(day.Value)"
                                                 class="@GetDayClasses(day.Value, isSelected, isDisabled, isFocused, isOutside)"
                                                 disabled="@isDisabled"

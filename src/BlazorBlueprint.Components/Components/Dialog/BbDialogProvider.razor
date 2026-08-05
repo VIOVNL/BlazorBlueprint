@@ -25,9 +25,11 @@
         <div class="@GetDialogContainerClass(dialog)"
              @ref="contentRefs[dialog.Id]"
              role="@(dialog is AlertDialogData or ConfirmDialogData ? "alertdialog" : "dialog")"
+             data-slot="dialog-content"
+             data-dialog-size="@GetDialogSizeAttribute(dialog)"
              aria-modal="true"
-             aria-labelledby="@titleId"
-             aria-describedby="@(dialog.Description != null ? descId : null)">
+             aria-labelledby="@(!string.IsNullOrWhiteSpace(dialog.Title) ? titleId : null)"
+             aria-describedby="@(!string.IsNullOrWhiteSpace(dialog.Description) ? descId : null)">
             @switch (dialog)
             {
                 case ConfirmDialogData confirm:
@@ -191,6 +193,20 @@
             : "max-w-lg";
 
         return $"{DialogContainerBaseClass} {sizeClass}";
+    }
+
+    private static string GetDialogSizeAttribute(DialogData dialog)
+    {
+        return dialog is not ComponentDialogData component
+            ? "default"
+            : component.Options.Size switch
+            {
+                DialogSize.Small => "small",
+                DialogSize.Large => "large",
+                DialogSize.ExtraLarge => "extra-large",
+                DialogSize.Full => "full",
+                _ => "default"
+            };
     }
 
     private async Task CleanupJsAsync()

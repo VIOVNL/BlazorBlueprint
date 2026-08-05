@@ -7,8 +7,8 @@
 
 <BlazorBlueprint.Primitives.Accordion.BbAccordionContent ForceMount="@ForceMount"
                                                       class="@CssClass">
-    <div class="overflow-hidden min-h-0">
-        <div class="pb-4 pt-0 text-sm">
+    <div data-slot="accordion-content-viewport" class="overflow-hidden min-h-0">
+        <div data-slot="accordion-content-body" class="pb-4 pt-0 text-sm">
             @ChildContent
         </div>
     </div>

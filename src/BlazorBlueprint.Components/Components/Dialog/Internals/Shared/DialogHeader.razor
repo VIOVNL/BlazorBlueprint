@@ -1,15 +1,21 @@
-<div class="flex flex-col space-y-2 text-center sm:text-left">
-    <h2 id="@TitleId" class="text-lg leading-none font-semibold tracking-tight">
-        @Title
-    </h2>
+@if (!string.IsNullOrWhiteSpace(Title) || !string.IsNullOrWhiteSpace(Description))
+{
+    <div data-slot="dialog-header" class="flex flex-col space-y-2 text-center sm:text-left">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <h2 data-slot="dialog-title" id="@TitleId" class="text-lg leading-none font-semibold tracking-tight">
+                @Title
+            </h2>
+        }
 
-    @if (!string.IsNullOrEmpty(Description))
-    {
-        <p id="@DescriptionId" class="text-muted-foreground text-sm">
-            @Description
-        </p>
-    }
-</div>
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <p data-slot="dialog-description" id="@DescriptionId" class="text-muted-foreground text-sm">
+                @Description
+            </p>
+        }
+    </div>
+}
 
 @code {
     [Parameter] public string Title { get; set; } = string.Empty;

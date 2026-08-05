@@ -2,6 +2,7 @@
 @typeparam TData where TData : class
 
 <th role="columnheader"
+    data-slot="data-grid-header-cell"
     tabindex="@(IsSortable ? 0 : -1)"
     aria-sort="@GetAriaSort()"
     aria-label="@EffectiveAriaLabel"

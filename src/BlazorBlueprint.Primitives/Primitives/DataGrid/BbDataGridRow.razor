@@ -5,6 +5,7 @@
 
 <tr @ref="elementRef"
     role="row"
+    data-slot="data-grid-row"
     aria-selected="@(IsSelected ? "true" : "false")"
     tabindex="@(IsKeyboardNavigable ? 0 : -1)"
     class="@ComputedClass"

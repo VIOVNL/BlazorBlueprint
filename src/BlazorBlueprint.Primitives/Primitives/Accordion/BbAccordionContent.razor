@@ -5,6 +5,7 @@
 {
     <div id="@Item.ContentId"
          role="region"
+         data-slot="accordion-content"
          aria-labelledby="@Item.TriggerId"
          data-state="@(Item.IsOpen ? "open" : "closed")"
          @attributes="AdditionalAttributes">

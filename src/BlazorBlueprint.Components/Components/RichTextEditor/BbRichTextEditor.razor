@@ -9,7 +9,7 @@
     @if (Toolbar != ToolbarPreset.None && ToolbarContent == null)
     {
         <div class="@ToolbarCssClass" data-slot="toolbar">
-            <div class="flex items-center gap-0.5">
+            <div data-slot="toolbar-content" class="flex items-center gap-0.5">
                 @if (Toolbar >= ToolbarPreset.Standard)
                 {
                     <BbNativeSelect TValue="string"
