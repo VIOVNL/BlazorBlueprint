@@ -599,6 +599,22 @@ function scheduleAutoSize(state) {
   });
 }
 
+function collectRenderedChildRects(root) {
+  const rects = [];
+  for (const child of root.children) {
+    const style = getComputedStyle(child);
+    if (style.display === 'none' || style.position === 'absolute') continue;
+
+    const rect = child.getBoundingClientRect();
+    if (style.display === 'contents' || rect.width <= 0) {
+      rects.push(...collectRenderedChildRects(child));
+    } else {
+      rects.push(rect);
+    }
+  }
+  return rects;
+}
+
 function measureRenderedContentWidth(cell) {
   const cellStyle = getComputedStyle(cell);
   const chromeWidth =
@@ -607,12 +623,9 @@ function measureRenderedContentWidth(cell) {
     (parseFloat(cellStyle.borderLeftWidth) || 0) +
     (parseFloat(cellStyle.borderRightWidth) || 0);
   const root = cell.children.length === 1 ? cell.children[0] : cell;
-  const children = Array.from(root.children).filter(child => {
-    const style = getComputedStyle(child);
-    return style.display !== 'none' && style.position !== 'absolute';
-  });
+  const childRects = collectRenderedChildRects(root);
 
-  if (!children.length) {
+  if (!childRects.length) {
     const range = document.createRange();
     range.selectNodeContents(root);
     const textWidth = range.getBoundingClientRect().width;
@@ -620,9 +633,8 @@ function measureRenderedContentWidth(cell) {
     return Math.ceil(Math.max(textWidth, 1) + chromeWidth);
   }
 
-  const rects = children.map(child => child.getBoundingClientRect());
-  const left = Math.min(...rects.map(rect => rect.left));
-  const right = Math.max(...rects.map(rect => rect.right));
+  const left = Math.min(...childRects.map(rect => rect.left));
+  const right = Math.max(...childRects.map(rect => rect.right));
   return Math.ceil(right - left + chromeWidth);
 }
 
