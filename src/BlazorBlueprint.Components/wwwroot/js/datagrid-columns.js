@@ -9,11 +9,13 @@ const gridStates = new Map();
 function getOrCreateState(gridId) {
   if (!gridStates.has(gridId)) {
     gridStates.set(gridId, {
+      gridId,
       containerElement: null,
       dotNetRef: null,
       // Resize state
       resizeEnabled: false,
       isDragging: false,
+      resizeCleanup: null,
       minWidth: 50,
       // Reorder state
       reorderEnabled: false,
@@ -32,6 +34,80 @@ function getOrCreateState(gridId) {
     });
   }
   return gridStates.get(gridId);
+}
+
+function getManagedTable(state) {
+  if (!state.containerElement) return null;
+
+  return Array.from(state.containerElement.children).find(element =>
+    element.tagName === 'TABLE' &&
+    element.getAttribute('data-bb-datagrid-id') === state.gridId) || null;
+}
+
+function getManagedHeaderCells(table) {
+  if (!table?.tHead) return [];
+
+  for (const row of table.tHead.rows) {
+    const cells = Array.from(row.cells).filter(cell => cell.hasAttribute('data-column-id'));
+    if (cells.length) return cells;
+  }
+
+  return [];
+}
+
+function getManagedColumns(table) {
+  const colgroup = Array.from(table.children).find(element => element.tagName === 'COLGROUP');
+  return colgroup ? Array.from(colgroup.children).filter(element => element.tagName === 'COL') : [];
+}
+
+function getManagedColumnCells(table, columnId) {
+  const cells = [];
+  for (const section of [table.tHead, ...table.tBodies, table.tFoot]) {
+    if (!section) continue;
+
+    for (const row of section.rows) {
+      for (const cell of row.cells) {
+        if (cell.getAttribute('data-column-id') === columnId) {
+          cells.push(cell);
+        }
+      }
+    }
+  }
+
+  return cells;
+}
+
+function getManagedHeaderCellFromEvent(target, table) {
+  const th = target instanceof Element ? target.closest('th[data-column-id]') : null;
+  return th?.closest('table') === table ? th : null;
+}
+
+function applyPinnedOffsets(table, headerCells, widths) {
+  let leftOffset = 0;
+  for (let index = 0; index < headerCells.length; index++) {
+    const header = headerCells[index];
+    if (header.getAttribute('data-pinned-side') !== 'left') continue;
+
+    const columnId = header.getAttribute('data-column-id');
+    for (const cell of getManagedColumnCells(table, columnId)) {
+      cell.style.left = `${Math.round(leftOffset)}px`;
+      cell.style.right = '';
+    }
+    leftOffset += widths[index] || header.getBoundingClientRect().width;
+  }
+
+  let rightOffset = 0;
+  for (let index = headerCells.length - 1; index >= 0; index--) {
+    const header = headerCells[index];
+    if (header.getAttribute('data-pinned-side') !== 'right') continue;
+
+    const columnId = header.getAttribute('data-column-id');
+    for (const cell of getManagedColumnCells(table, columnId)) {
+      cell.style.right = `${Math.round(rightOffset)}px`;
+      cell.style.left = '';
+    }
+    rightOffset += widths[index] || header.getBoundingClientRect().width;
+  }
 }
 
 /**
@@ -74,6 +150,38 @@ export function initColumnResize(containerElement, dotNetRef, gridId, minWidth) 
 }
 
 /**
+ * Configure resize and reorder on every render so features can be enabled or disabled after
+ * the module has already been initialized.
+ */
+export function configureColumnInteractions(
+  containerElement,
+  dotNetRef,
+  gridId,
+  resizeEnabled,
+  minWidth,
+  reorderEnabled
+) {
+  if (!containerElement || !dotNetRef) return;
+
+  const state = getOrCreateState(gridId);
+  state.containerElement = containerElement;
+  state.dotNetRef = dotNetRef;
+  const nextResizeEnabled = Boolean(resizeEnabled);
+  if (!nextResizeEnabled) state.resizeCleanup?.();
+  state.resizeEnabled = nextResizeEnabled;
+  state.minWidth = minWidth || 50;
+  state.reorderEnabled = Boolean(reorderEnabled);
+
+  if (state.reorderEnabled) {
+    ensureDropIndicator(state);
+  } else {
+    state.reorderableIds.clear();
+    clearDragState(state);
+    detachReorderHandlers(state);
+  }
+}
+
+/**
  * Setup resize handles for resizable columns.
  * Finds elements with [data-resize-handle] and attaches pointer event listeners.
  * Resize is handled entirely in JS for instant feedback — no Blazor round-trip.
@@ -81,12 +189,15 @@ export function initColumnResize(containerElement, dotNetRef, gridId, minWidth) 
  */
 export function setupResizeHandles(gridId) {
   const state = gridStates.get(gridId);
-  if (!state || !state.containerElement) return;
+  if (!state || !state.containerElement || !state.resizeEnabled) return;
 
-  const table = state.containerElement.querySelector('table');
+  const table = getManagedTable(state);
   if (!table) return;
 
-  const handles = table.querySelectorAll('[data-resize-handle]');
+  const headerCells = getManagedHeaderCells(table);
+  const handles = headerCells
+    .map(header => header.querySelector('[data-resize-handle]'))
+    .filter(Boolean);
   for (const handle of handles) {
     if (handle._resizeSetup) continue;
     handle._resizeSetup = true;
@@ -102,11 +213,11 @@ export function setupResizeHandles(gridId) {
       e.stopPropagation();
       e.preventDefault();
 
-      if (state.isDragging) return;
+      if (!state.resizeEnabled || state.isDragging) return;
 
       // Snapshot all column widths and freeze them on <col> elements
-      const ths = Array.from(table.querySelectorAll('thead th[data-column-id]'));
-      const cols = table.querySelectorAll('colgroup col');
+      const ths = getManagedHeaderCells(table);
+      const cols = getManagedColumns(table);
 
       let totalWidth = 0;
       const initialWidths = [];
@@ -150,6 +261,11 @@ export function setupResizeHandles(gridId) {
           activeCol.style.width = newWidth + 'px';
         }
         table.style.width = Math.round(layout.tableWidth) + 'px';
+
+        const currentWidths = initialWidths.slice();
+        if (fillColumnIndex >= 0) currentWidths[fillColumnIndex] = layout.fillWidth;
+        if (thIndex >= 0) currentWidths[thIndex] = newWidth;
+        applyPinnedOffsets(table, ths, currentWidths);
       };
 
       // Freeze the measured layout before dragging. Non-resizable, pinned, and auto-sized
@@ -163,6 +279,7 @@ export function setupResizeHandles(gridId) {
 
       const onMove = (moveEvt) => {
         if (moveEvt.pointerId !== e.pointerId) return;
+        if (!state.resizeEnabled) return;
         moveEvt.preventDefault();
         const delta = moveEvt.clientX - startX;
         const newWidth = Math.max(state.minWidth, Math.round(startWidth + delta));
@@ -181,6 +298,7 @@ export function setupResizeHandles(gridId) {
         try { handle.releasePointerCapture(endEvt.pointerId); } catch {}
 
         state.isDragging = false;
+        state.resizeCleanup = null;
 
         // Commit all column widths to Blazor
         const widths = {};
@@ -193,11 +311,13 @@ export function setupResizeHandles(gridId) {
 
         state.dotNetRef.invokeMethodAsync('OnResizeCompleted', columnId, widths)
           .catch(() => { /* component may be disposed */ });
+        scheduleAutoSize(state);
       };
 
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onEnd);
       document.addEventListener('pointercancel', onEnd);
+      state.resizeCleanup = () => onEnd({ pointerId: e.pointerId });
 
       try { handle.setPointerCapture(e.pointerId); } catch {}
     });
@@ -220,6 +340,10 @@ export function initColumnReorder(containerElement, dotNetRef, gridId) {
   state.dotNetRef = dotNetRef;
   state.reorderEnabled = true;
 
+  ensureDropIndicator(state);
+}
+
+function ensureDropIndicator(state) {
   // Create drop indicator element
   if (!state.dropIndicator) {
     const indicator = document.createElement('div');
@@ -227,8 +351,7 @@ export function initColumnReorder(containerElement, dotNetRef, gridId) {
       'position:absolute;width:4px;background:var(--ring);' +
       'box-shadow:0 0 0 1px var(--background);border-radius:9999px;' +
       'top:0;bottom:0;pointer-events:none;z-index:50;display:none;';
-    containerElement.style.position = 'relative';
-    containerElement.appendChild(indicator);
+    state.containerElement.appendChild(indicator);
     state.dropIndicator = indicator;
   }
 }
@@ -276,9 +399,15 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
   if (!state || !state.containerElement) return;
 
   // Always update the set of reorderable column IDs
-  state.reorderableIds = new Set(reorderableColumnIds);
+  state.reorderableIds = new Set(reorderableColumnIds || []);
 
-  const table = state.containerElement.querySelector('table');
+  if (!state.reorderEnabled || state.reorderableIds.size === 0) {
+    clearDragState(state);
+    detachReorderHandlers(state);
+    return;
+  }
+
+  const table = getManagedTable(state);
   if (!table) return;
 
   // Blazor can replace the table while retaining the component instance. Rebind event
@@ -290,14 +419,15 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
   state.reorderTable = table;
 
   const onDragStart = (e) => {
-    const th = e.target.closest('th[data-column-id]');
+    const th = getManagedHeaderCellFromEvent(e.target, table);
     if (!th) return;
 
     const columnId = th.getAttribute('data-column-id');
     if (!state.reorderableIds.has(columnId)) return;
 
     // Don't start drag if a resize is in progress
-    if (state.isDragging || e.target.closest('[data-resize-handle],button,a,input,select,textarea')) {
+    if (!state.reorderEnabled || state.isDragging ||
+      e.target.closest('[data-resize-handle],button,a,input,select,textarea')) {
       e.preventDefault();
       return;
     }
@@ -347,9 +477,9 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
   const onDragEnd = () => clearDragState(state);
 
   const onDragOver = (e) => {
-    if (!state.dragColumnId) return;
+    if (!state.reorderEnabled || !state.dragColumnId) return;
 
-    const th = e.target.closest('th[data-column-id]');
+    const th = getManagedHeaderCellFromEvent(e.target, table);
     if (!th) return;
 
     const columnId = th.getAttribute('data-column-id');
@@ -394,12 +524,12 @@ export function setupDraggableHeaders(gridId, reorderableColumnIds) {
   };
 
   const onDrop = (e) => {
-    if (!state.dragColumnId) return;
+    if (!state.reorderEnabled || !state.dragColumnId) return;
 
     e.preventDefault();
     clearDropIndicator(state);
 
-    const th = e.target.closest('th[data-column-id]');
+    const th = getManagedHeaderCellFromEvent(e.target, table);
     if (!th) return;
 
     // Do not allow dropping onto a pinned column
@@ -472,10 +602,10 @@ function scheduleAutoSize(state) {
 function measureRenderedContentWidth(cell) {
   const cellStyle = getComputedStyle(cell);
   const chromeWidth =
-    parseFloat(cellStyle.paddingLeft) +
-    parseFloat(cellStyle.paddingRight) +
-    parseFloat(cellStyle.borderLeftWidth) +
-    parseFloat(cellStyle.borderRightWidth);
+    (parseFloat(cellStyle.paddingLeft) || 0) +
+    (parseFloat(cellStyle.paddingRight) || 0) +
+    (parseFloat(cellStyle.borderLeftWidth) || 0) +
+    (parseFloat(cellStyle.borderRightWidth) || 0);
   const root = cell.children.length === 1 ? cell.children[0] : cell;
   const children = Array.from(root.children).filter(child => {
     const style = getComputedStyle(child);
@@ -483,7 +613,11 @@ function measureRenderedContentWidth(cell) {
   });
 
   if (!children.length) {
-    return Math.ceil(root.getBoundingClientRect().width + chromeWidth);
+    const range = document.createRange();
+    range.selectNodeContents(root);
+    const textWidth = range.getBoundingClientRect().width;
+    range.detach();
+    return Math.ceil(Math.max(textWidth, 1) + chromeWidth);
   }
 
   const rects = children.map(child => child.getBoundingClientRect());
@@ -493,13 +627,13 @@ function measureRenderedContentWidth(cell) {
 }
 
 function applyAutoSize(state) {
-  if (!state.autoSizeIds.size || state.isDragging) return;
+  if (state.isDragging) return;
 
-  const table = state.containerElement.querySelector('table');
+  const table = getManagedTable(state);
   if (!table) return;
 
-  const ths = Array.from(table.querySelectorAll('thead th[data-column-id]'));
-  const cols = Array.from(table.querySelectorAll('colgroup col'));
+  const ths = getManagedHeaderCells(table);
+  const cols = getManagedColumns(table);
   if (!ths.length || ths.length !== cols.length) return;
 
   const widths = ths.map((th) => Math.ceil(th.getBoundingClientRect().width));
@@ -507,7 +641,7 @@ function applyAutoSize(state) {
     const index = ths.findIndex(th => th.getAttribute('data-column-id') === columnId);
     if (index < 0) continue;
 
-    const cells = table.querySelectorAll(`[data-column-id="${CSS.escape(columnId)}"]`);
+    const cells = getManagedColumnCells(table, columnId);
     let contentWidth = 0;
     for (const cell of cells) {
       contentWidth = Math.max(contentWidth, measureRenderedContentWidth(cell));
@@ -538,6 +672,7 @@ function applyAutoSize(state) {
   if (table.style.width !== tableWidth) {
     table.style.width = tableWidth;
   }
+  applyPinnedOffsets(table, ths, widths);
 }
 
 // ─── Disposal ───────────────────────────────────────────────────────────────
@@ -552,6 +687,7 @@ export function dispose(gridId) {
 
   detachReorderHandlers(state);
   clearDragState(state);
+  state.resizeCleanup?.();
 
   if (state.autoSizeFrame) {
     cancelAnimationFrame(state.autoSizeFrame);

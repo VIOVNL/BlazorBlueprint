@@ -77,18 +77,11 @@
 
     private bool IsReorderable => Reorderable && !string.IsNullOrEmpty(ColumnId);
 
-    private void HandleClick(MouseEventArgs e)
+    private void HandleClick()
     {
         if (IsSortable && Context != null)
         {
-            if (e.CtrlKey || e.MetaKey)
-            {
-                Context.ToggleSort(ColumnId!, multiSort: true);
-            }
-            else
-            {
-                Context.TogglePrimarySort(ColumnId!);
-            }
+            Context.ToggleSort(ColumnId!, multiSort: true);
         }
     }
 
@@ -96,14 +89,7 @@
     {
         if (IsSortable && Context != null && (e.Key == "Enter" || e.Key == " "))
         {
-            if (e.CtrlKey || e.MetaKey)
-            {
-                Context.ToggleSort(ColumnId!, multiSort: true);
-            }
-            else
-            {
-                Context.TogglePrimarySort(ColumnId!);
-            }
+            Context.ToggleSort(ColumnId!, multiSort: true);
         }
     }
 

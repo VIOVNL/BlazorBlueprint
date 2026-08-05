@@ -76,5 +76,5 @@
     <Content Update="wwwroot\**" Pack="false" />
   </ItemGroup>
 
-  <Import Project="..\..\tools\tailwind.targets" />
+  <Import Project="build\tailwind.targets" />
 </Project>

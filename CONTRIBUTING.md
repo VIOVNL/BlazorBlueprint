@@ -32,23 +32,23 @@ We welcome all contributions — whether it's bug fixes, new features, documenta
    ```
 4. **Download the Tailwind CSS standalone CLI:**
 
-   Blazor Blueprint uses the [Tailwind CSS standalone CLI](https://tailwindcss.com/blog/standalone-cli) — no Node.js or npm required. The binary is not included in the repository and must be downloaded before your first build.
+   Blazor Blueprint uses the [Tailwind CSS standalone CLI](https://tailwindcss.com/blog/standalone-cli) — no Node.js or npm required. The binary is not included in the repository and must be downloaded before your first build. The installer downloads the pinned version used by CI; set `TAILWIND_VERSION` only when deliberately upgrading it.
 
-   Run the appropriate script from the `tools/` directory:
+   Run the appropriate script from the Components project's `build/` directory:
 
    **Linux / macOS:**
    ```bash
-   cd tools
-   ./install.sh
+   cd src/BlazorBlueprint.Components/build
+   ./install-tailwind.sh
    ```
 
    **Windows (PowerShell):**
    ```powershell
-   cd tools
-   .\install.ps1
+   cd src/BlazorBlueprint.Components/build
+   .\install-tailwind.ps1
    ```
    
-   The MSBuild target (`tools/tailwind.targets`) is imported by `BlazorBlueprint.Components` and runs automatically on every build — no manual Tailwind invocation needed.
+   The colocated `tailwind.targets` file is imported by `BlazorBlueprint.Components` and runs automatically on every build — no manual Tailwind invocation needed.
 
 5. **Install dependencies** and verify the project builds:
    ```bash

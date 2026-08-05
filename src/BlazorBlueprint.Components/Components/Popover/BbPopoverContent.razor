@@ -9,6 +9,7 @@
                                                    Align="@Align"
                                                    Offset="@Offset"
                                                    MatchTriggerWidth="@MatchTriggerWidth"
+                                                   Flip="@Flip"
                                                    Strategy="@Strategy"
                                                    ZIndex="@ZIndex"
                                                    OnEscapeKeyDown="@OnEscapeKeyDown"
@@ -48,6 +49,12 @@
 
     [Parameter]
     public bool MatchTriggerWidth { get; set; } = false;
+
+    /// <summary>
+    /// Whether positioning may flip the popover to the opposite side when space is limited.
+    /// </summary>
+    [Parameter]
+    public bool Flip { get; set; } = true;
 
     /// <summary>
     /// CSS positioning strategy.

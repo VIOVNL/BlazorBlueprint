@@ -62,7 +62,8 @@
                     OnToggleExpand="@(DetailTemplate != null || HasDetailRows ? EventCallback.Factory.Create<TData>(this, HandleRowExpandToggle) : default)"
                     OnRowContextMenu="@(RowContextMenu != null ? (EventCallback<(TData, double, double)>)EventCallback.Factory.Create<(TData, double, double)>(this, HandleRowContextMenu) : default)"
                     Class="@ClassNames.cn("w-full caption-bottom text-sm", HasTableFixed() ? "table-fixed" : "")"
-                    AriaLabel="@AriaLabel">
+                    AriaLabel="@AriaLabel"
+                    data-bb-datagrid-id="@gridId">
                     @if (HasTableFixed())
                     {
                         <colgroup>
@@ -95,6 +96,7 @@
                                     Class="@GetHeaderCellClass(column, isSelectColumn, isExpandColumn, isLastLeft, isFirstRight)"
                                     style="@GetColumnStyle(column, _cachedVisibleColumns)"
                                     data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)"
+                                    data-pinned-side="@GetPinnedSideAttribute(column.Pinned)"
                                     data-auto-size="@(column.AutoSize ? "true" : null)">
                                     @if (isExpandColumn)
                                     {
@@ -468,6 +470,7 @@
                     style="@pinnedStyle"
                     data-column-id="@column.ColumnId"
                     data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)"
+                    data-pinned-side="@GetPinnedSideAttribute(column.Pinned)"
                     data-auto-size="@(column.AutoSize ? "true" : null)">
                     @if (isExpandColumn)
                     {
@@ -655,6 +658,7 @@
                     style="@pinnedStyle"
                     data-column-id="@column.ColumnId"
                     data-pinned="@(column.Pinned != ColumnPinning.None ? "true" : null)"
+                    data-pinned-side="@GetPinnedSideAttribute(column.Pinned)"
                     data-auto-size="@(column.AutoSize ? "true" : null)">
                     @if (isSelectColumn)
                     {

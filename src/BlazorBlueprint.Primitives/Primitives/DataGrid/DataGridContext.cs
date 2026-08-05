@@ -127,28 +127,12 @@ public class DataGridContext<TData> : PrimitiveContextWithEvents<DataGridState<T
     /// Resets pagination to the first page.
     /// </summary>
     /// <param name="columnId">The ID of the column to sort.</param>
-    /// <param name="multiSort">Whether to add to existing sorts (Ctrl+Click behavior).</param>
+    /// <param name="multiSort">Whether to add to and cycle existing sorts without clearing their priority order.</param>
     public void ToggleSort(string columnId, bool multiSort = false)
     {
         UpdateState(state =>
         {
             state.Sorting.ToggleSort(columnId, multiSort);
-            state.Pagination.Reset();
-        });
-
-        OnSortChange?.Invoke(State.Sorting.Definitions);
-    }
-
-    /// <summary>
-    /// Makes a column the primary sort while preserving other active sorts as tie-breakers.
-    /// Resets pagination to the first page.
-    /// </summary>
-    /// <param name="columnId">The ID of the column to make primary.</param>
-    public void TogglePrimarySort(string columnId)
-    {
-        UpdateState(state =>
-        {
-            state.Sorting.TogglePrimarySort(columnId);
             state.Pagination.Reset();
         });
 

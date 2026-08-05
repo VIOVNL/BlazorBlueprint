@@ -25,7 +25,7 @@ public class DataGridSortState
     /// When <paramref name="multiSort"/> is true, adds to or modifies existing definitions.
     /// </summary>
     /// <param name="columnId">The ID of the column to toggle.</param>
-    /// <param name="multiSort">Whether to support multi-column sorting (e.g., Ctrl+Click).</param>
+    /// <param name="multiSort">Whether to add to and cycle existing sorts without clearing their priority order.</param>
     public void ToggleSort(string columnId, bool multiSort = false)
     {
         if (string.IsNullOrWhiteSpace(columnId))
@@ -67,50 +67,6 @@ public class DataGridSortState
                 Direction = SortDirection.Ascending
             });
         }
-    }
-
-    /// <summary>
-    /// Makes a column the primary sort while preserving the other active sorts as tie-breakers.
-    /// A secondary sort is promoted without changing its direction. The current primary sort
-    /// cycles through ascending, descending, and off.
-    /// </summary>
-    /// <param name="columnId">The ID of the column to make primary.</param>
-    public void TogglePrimarySort(string columnId)
-    {
-        if (string.IsNullOrWhiteSpace(columnId))
-        {
-            throw new ArgumentException("Column ID cannot be null or whitespace.", nameof(columnId));
-        }
-
-        var existingIndex = definitions.FindIndex(definition => definition.ColumnId == columnId);
-        if (existingIndex == 0)
-        {
-            var primary = definitions[0];
-            if (primary.Direction == SortDirection.Ascending)
-            {
-                primary.Direction = SortDirection.Descending;
-            }
-            else
-            {
-                definitions.RemoveAt(0);
-            }
-
-            return;
-        }
-
-        if (existingIndex > 0)
-        {
-            var existing = definitions[existingIndex];
-            definitions.RemoveAt(existingIndex);
-            definitions.Insert(0, existing);
-            return;
-        }
-
-        definitions.Insert(0, new SortDefinition
-        {
-            ColumnId = columnId,
-            Direction = SortDirection.Ascending
-        });
     }
 
     /// <summary>

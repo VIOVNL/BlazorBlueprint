@@ -33,6 +33,6 @@
     <EmbeddedResource Include="CodeExamples\**\*.txt" />
   </ItemGroup>
 
-  <Import Project="..\..\tools\tailwind.targets" />
+  <Import Project="..\..\src\BlazorBlueprint.Components\build\tailwind.targets" />
 
 </Project>

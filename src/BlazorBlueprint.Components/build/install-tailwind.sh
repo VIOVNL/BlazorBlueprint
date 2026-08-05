@@ -1,6 +1,11 @@
 #!/bin/bash
 # Tailwind CLI Downloader for Linux/macOS (Multi-Arch)
 
+set -euo pipefail
+
+TAILWIND_VERSION="${TAILWIND_VERSION:-v4.2.2}"
+SCRIPT_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
 ARCH=$(uname -m)
 OS=$(uname -s)
 
@@ -26,9 +31,9 @@ else
     exit 1
 fi
 
-URL="https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$PLATFORM"
+URL="https://github.com/tailwindlabs/tailwindcss/releases/download/$TAILWIND_VERSION/tailwindcss-$PLATFORM"
 
 echo "Downloading $URL..."
-curl -L "$URL" -o "./$TARGET"
-chmod +x "./$TARGET"
-echo "Done! Binary saved as tools/$TARGET"
+curl -L "$URL" -o "$SCRIPT_DIRECTORY/$TARGET"
+chmod +x "$SCRIPT_DIRECTORY/$TARGET"
+echo "Done! Binary saved as $SCRIPT_DIRECTORY/$TARGET"

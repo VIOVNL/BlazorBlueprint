@@ -798,8 +798,17 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
             .Where(column => column.AutoSize)
             .Select(column => column.ColumnId)
             .ToArray();
+        foreach (var columnId in _columns
+                     .Where(column => column.AutoSize)
+                     .Select(column => column.ColumnId))
+        {
+            if (_gridState.Columns.GetWidth(columnId) is not null)
+            {
+                _gridState.Columns.SetWidth(columnId, null);
+            }
+        }
 
-        if (!Resizable && !Reorderable && autoSizeColumnIds.Length == 0)
+        if (!jsInitialized && !Resizable && !Reorderable && autoSizeColumnIds.Length == 0)
         {
             return;
         }
@@ -812,35 +821,31 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
                     "./_content/BlazorBlueprint.Components/js/datagrid-columns.js");
                 selfRef = DotNetObjectReference.Create(this);
                 jsInitialized = true;
-
-                if (Resizable)
-                {
-                    await columnsModule.InvokeVoidAsync("initColumnResize", containerRef, selfRef, gridId, MinColumnWidth);
-                }
-
-                if (Reorderable)
-                {
-                    await columnsModule.InvokeVoidAsync("initColumnReorder", containerRef, selfRef, gridId);
-                }
-
             }
 
             if (jsInitialized)
             {
+                await columnsModule!.InvokeVoidAsync(
+                    "configureColumnInteractions",
+                    containerRef,
+                    selfRef,
+                    gridId,
+                    Resizable,
+                    MinColumnWidth,
+                    Reorderable);
+
                 if (Resizable)
                 {
                     await columnsModule!.InvokeVoidAsync("setupResizeHandles", gridId);
                 }
 
-                if (Reorderable)
-                {
-                    var reorderableIds = GetVisibleColumns()
+                var reorderableIds = Reorderable
+                    ? GetVisibleColumns()
                         .Where(c => c.Reorderable)
                         .Select(c => c.ColumnId)
-                        .ToArray();
-                    await columnsModule!.InvokeVoidAsync("setupDraggableHeaders", gridId, reorderableIds);
-                }
-
+                        .ToArray()
+                    : [];
+                await columnsModule!.InvokeVoidAsync("setupDraggableHeaders", gridId, reorderableIds);
 
                 if (autoSizeColumnIds.Length > 0)
                 {
@@ -2887,6 +2892,11 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
     {
         foreach (var (colId, widthPx) in widths)
         {
+            if (_columns.FirstOrDefault(column => column.ColumnId == colId)?.AutoSize == true)
+            {
+                continue;
+            }
+
             _gridState.Columns.SetWidth(colId, $"{Math.Round(widthPx)}px");
         }
 
@@ -3376,6 +3386,11 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
 
     private string? GetColumnWidthStyle(IDataGridColumn<TData> column)
     {
+        if (column.AutoSize)
+        {
+            return null;
+        }
+
         var stateWidth = columnStateInitialized ? _gridState.Columns.GetWidth(column.ColumnId) : null;
         var width = stateWidth ?? column.Width;
         return width != null ? $"width: {width}" : null;
@@ -3401,6 +3416,13 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
 
         return 150.0;
     }
+
+    private static string? GetPinnedSideAttribute(ColumnPinning pinning) => pinning switch
+    {
+        ColumnPinning.Left => "left",
+        ColumnPinning.Right => "right",
+        _ => null
+    };
 
     /// <summary>
     /// Computes the CSS style string for a pinned column (position: sticky + left/right offset).

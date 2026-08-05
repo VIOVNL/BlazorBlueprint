@@ -75,7 +75,7 @@ export function initializeDragDrop(containerElement, dotNetRef, instanceId) {
   const createIndicator = () => {
     const indicator = document.createElement('div');
     indicator.className = 'bb-tree-drop-indicator';
-    indicator.style.cssText = 'position:absolute;left:0;right:0;height:2px;background:hsl(var(--primary));pointer-events:none;z-index:50;display:none;';
+    indicator.style.cssText = 'position:absolute;left:0;right:0;height:2px;background:var(--primary);pointer-events:none;z-index:50;display:none;';
     // Only set position when computed position is static and no inline override exists
     const computedPosition = window.getComputedStyle(containerElement).position;
     if (computedPosition === 'static' && !containerElement.style.position) {
