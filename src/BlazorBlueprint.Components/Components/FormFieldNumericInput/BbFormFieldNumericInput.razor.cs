@@ -120,7 +120,14 @@ public partial class BbFormFieldNumericInput<TValue> : FormFieldBase where TValu
     public string? Format { get; set; }
 
     /// <summary>
-    /// Gets or sets whether debounce is disabled during typing.
+    /// Gets or sets when typed values are sent to .NET. Step controls remain immediate.
+    /// </summary>
+    [Parameter]
+    public UpdateTiming UpdateTiming { get; set; } = UpdateTiming.Debounced;
+
+    /// <summary>
+    /// Gets or sets whether debounce is disabled during typing. This compatibility switch
+    /// takes precedence over <see cref="UpdateTiming"/>.
     /// </summary>
     [Parameter]
     public bool DisableDebounce { get; set; }

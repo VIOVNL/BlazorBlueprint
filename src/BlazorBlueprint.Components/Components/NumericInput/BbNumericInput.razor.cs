@@ -20,6 +20,9 @@ public partial class BbNumericInput<TValue> : ComponentBase where TValue : struc
     private string? generatedId;
     private bool jsInitialized;
     private bool lastWheelStepEnabled;
+    private UpdateTiming lastUpdateTiming;
+    private bool lastDisableDebounce;
+    private int lastDebounceInterval;
     private bool disposed;
     private string editingValue = string.Empty;
     private bool isEditing;
@@ -165,7 +168,15 @@ public partial class BbNumericInput<TValue> : ComponentBase where TValue : struc
     public string? Format { get; set; }
 
     /// <summary>
-    /// Gets or sets whether debounce is disabled. When false (default), <see cref="ValueChanged"/> is debounced during typing.
+    /// Gets or sets when typed values are sent to .NET. The default remains debounced for
+    /// backward compatibility. Step buttons and step keys are always applied immediately.
+    /// </summary>
+    [Parameter]
+    public UpdateTiming UpdateTiming { get; set; } = UpdateTiming.Debounced;
+
+    /// <summary>
+    /// Gets or sets whether debounce is disabled. This compatibility switch takes precedence
+    /// over <see cref="UpdateTiming"/> and makes typed values update immediately.
     /// </summary>
     [Parameter]
     public bool DisableDebounce { get; set; }
@@ -205,6 +216,9 @@ public partial class BbNumericInput<TValue> : ComponentBase where TValue : struc
                     "import", "./_content/BlazorBlueprint.Components/js/numeric-input.js");
                 dotNetRef = DotNetObjectReference.Create(this);
                 lastWheelStepEnabled = EnableWheelStep;
+                lastUpdateTiming = UpdateTiming;
+                lastDisableDebounce = DisableDebounce;
+                lastDebounceInterval = DebounceInterval;
                 await jsModule.InvokeVoidAsync("initialize", inputRef, dotNetRef, instanceId, GetJsConfig());
                 jsInitialized = true;
             }
@@ -217,13 +231,21 @@ public partial class BbNumericInput<TValue> : ComponentBase where TValue : struc
                 // JS interop not available during prerendering
             }
         }
-        else if (jsInitialized && jsModule != null && lastWheelStepEnabled != EnableWheelStep)
+        else if (jsInitialized && jsModule != null
+                 && (lastWheelStepEnabled != EnableWheelStep
+                     || lastUpdateTiming != UpdateTiming
+                     || lastDisableDebounce != DisableDebounce
+                     || lastDebounceInterval != DebounceInterval))
         {
-            // Keep wheel stepping in sync when the parameter changes after the first render
+            // Keep browser-side input behavior in sync when parameters change after first render.
             lastWheelStepEnabled = EnableWheelStep;
+            lastUpdateTiming = UpdateTiming;
+            lastDisableDebounce = DisableDebounce;
+            lastDebounceInterval = DebounceInterval;
 
             try
             {
+                await jsModule.InvokeVoidAsync("updateConfig", instanceId, GetJsConfig());
                 await jsModule.InvokeVoidAsync("setWheelStepEnabled", instanceId, EnableWheelStep);
             }
             catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
@@ -243,6 +265,7 @@ public partial class BbNumericInput<TValue> : ComponentBase where TValue : struc
     private object GetJsConfig() => new
     {
         disableDebounce = DisableDebounce,
+        updateTiming = UpdateTiming.ToString().ToLowerInvariant(),
         debounceMs = DebounceInterval,
         stepKeys = new[] { "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End" },
         allowDecimal = IsFloatingPoint,

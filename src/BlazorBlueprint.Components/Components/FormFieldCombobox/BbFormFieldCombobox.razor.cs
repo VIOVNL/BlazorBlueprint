@@ -116,6 +116,12 @@ public partial class BbFormFieldCombobox<TValue> : FormFieldBase
     public string? InputClass { get; set; }
 
     /// <summary>
+    /// Gets or sets additional CSS classes applied to the scrollable option list.
+    /// </summary>
+    [Parameter]
+    public string? ListClass { get; set; }
+
+    /// <summary>
     /// Gets or sets the width of the popover content.
     /// </summary>
     [Parameter]

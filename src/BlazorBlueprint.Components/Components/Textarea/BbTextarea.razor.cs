@@ -45,6 +45,11 @@ public partial class BbTextarea : ComponentBase
     private string? generatedId;
     private bool jsInitialized;
     private bool disposed;
+    private bool renderedValueInitialized;
+    private bool hasUserValue;
+    private bool externalValueSyncPending;
+    private string? renderedValue;
+    private string? lastUserValue;
     private readonly InputValidationBehavior validation = new();
 
     /// <summary>
@@ -269,6 +274,19 @@ public partial class BbTextarea : ComponentBase
         base.OnParametersSet();
 
         validation.Update(CascadedEditContext, ValueExpression);
+
+        if (!renderedValueInitialized)
+        {
+            renderedValue = Value;
+            renderedValueInitialized = true;
+            return;
+        }
+
+        if (!hasUserValue || !string.Equals(Value, lastUserValue, StringComparison.Ordinal))
+        {
+            renderedValue = Value;
+            externalValueSyncPending = jsInitialized;
+        }
     }
 
     /// <inheritdoc />
@@ -291,6 +309,19 @@ public partial class BbTextarea : ComponentBase
             catch (InvalidOperationException)
             {
                 // JS interop not available during prerendering
+            }
+        }
+        else if (externalValueSyncPending && jsModule is not null && jsInitialized)
+        {
+            externalValueSyncPending = false;
+
+            try
+            {
+                await jsModule.InvokeVoidAsync("setValue", instanceId, renderedValue);
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException)
+            {
+                // Expected during circuit disconnect
             }
         }
     }
@@ -327,6 +358,8 @@ public partial class BbTextarea : ComponentBase
         }
 
         Value = value;
+        lastUserValue = value;
+        hasUserValue = true;
 
         if (ValueChanged.HasDelegate)
         {
@@ -352,6 +385,9 @@ public partial class BbTextarea : ComponentBase
         }
 
         Value = value;
+        renderedValue = value;
+        lastUserValue = value;
+        hasUserValue = true;
 
         if (ValueChanged.HasDelegate)
         {

@@ -134,7 +134,8 @@ export function initialize(element, dotNetRef, instanceId, config) {
     handleInput,
     handleChange,
     guard,
-    element
+    element,
+    updateCharacterCount
   };
 
   // When notifyOnBlur is true, also listen for blur events so JsOnChange fires
@@ -179,6 +180,26 @@ export function updateConfig(instanceId, config) {
   if (stored) {
     stored.state.config = config;
   }
+}
+
+/**
+ * Applies a value that originated outside the current browser edit session.
+ * Parent echoes of user input are intentionally not routed through this method.
+ * @param {string} instanceId - The instance to update.
+ * @param {string|null} value - The new external value.
+ */
+export function setValue(instanceId, value) {
+  const stored = instances.get(instanceId);
+  if (!stored) {
+    return;
+  }
+
+  const nextValue = value ?? '';
+  if (stored.element.value !== nextValue) {
+    stored.element.value = nextValue;
+  }
+
+  stored.updateCharacterCount();
 }
 
 /**

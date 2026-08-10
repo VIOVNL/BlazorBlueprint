@@ -53,6 +53,8 @@ public partial class BbInputField<TValue> : ComponentBase
     private bool jsInitialized;
     private bool disposed;
     private string editingValue = string.Empty;
+    private string renderedDisplayValue = string.Empty;
+    private bool renderedDisplayValueInitialized;
     private bool isEditing;
     private bool hasParseError;
     private InputFieldErrorKind? currentErrorKind;
@@ -340,6 +342,12 @@ public partial class BbInputField<TValue> : ComponentBase
         }
 
         validation.Update(CascadedEditContext, ValueExpression);
+
+        if (!isEditing || !renderedDisplayValueInitialized)
+        {
+            renderedDisplayValue = DisplayValue;
+            renderedDisplayValueInitialized = true;
+        }
     }
 
     /// <inheritdoc />
@@ -472,6 +480,7 @@ public partial class BbInputField<TValue> : ComponentBase
             }
 
             await ClearErrorState();
+            renderedDisplayValue = DisplayValue;
             NotifyFieldChanged();
             StateHasChanged();
             return;
@@ -510,6 +519,7 @@ public partial class BbInputField<TValue> : ComponentBase
             await SetErrorState(InputFieldErrorKind.Parse, ex);
         }
 
+        renderedDisplayValue = DisplayValue;
         NotifyFieldChanged();
         StateHasChanged();
     }
@@ -538,6 +548,7 @@ public partial class BbInputField<TValue> : ComponentBase
         }
 
         isEditing = true;
+        renderedDisplayValue = editingValue;
     }
 
     /// <summary>

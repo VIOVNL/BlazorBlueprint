@@ -79,7 +79,8 @@ const foldFullWidth = (ch) => {
  * @param {DotNetObject} dotNetRef - Reference to the Blazor component.
  * @param {string} instanceId - Unique ID for this instance.
  * @param {object} config - Configuration object.
- * @param {boolean} config.disableDebounce - When true, fire JsOnInput immediately.
+ * @param {boolean} config.disableDebounce - Compatibility switch that forces immediate updates.
+ * @param {'immediate'|'onchange'|'debounced'} config.updateTiming - When typed values are sent to .NET.
  * @param {number} config.debounceMs - Debounce interval (when disableDebounce is false).
  * @param {string[]} config.stepKeys - Key names to intercept (e.g. ['ArrowUp', 'ArrowDown']).
  * @param {boolean} config.allowDecimal - Whether decimal points are allowed.
@@ -161,14 +162,21 @@ export function initialize(element, dotNetRef, instanceId, config) {
     sanitizeInput();
     const value = element.value;
 
-    if (state.config.disableDebounce) {
+    const updateTiming = state.config.disableDebounce
+      ? 'immediate'
+      : (state.config.updateTiming || 'debounced').toLowerCase();
+
+    if (updateTiming === 'immediate') {
       dotNetRef.invokeMethodAsync('JsOnInput', value).catch(() => {});
-    } else {
+    } else if (updateTiming === 'debounced') {
       cancelPending();
       state.debounceTimer = setTimeout(() => {
         state.debounceTimer = null;
         dotNetRef.invokeMethodAsync('JsOnInput', value).catch(() => {});
       }, state.config.debounceMs);
+    } else {
+      // OnChange keeps the browser's in-progress value local and commits once on blur.
+      cancelPending();
     }
   };
 

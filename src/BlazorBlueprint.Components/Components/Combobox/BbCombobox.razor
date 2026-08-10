@@ -33,7 +33,7 @@
                 <CascadingValue Value="this" IsFixed="true">
                 <BbCommand SearchQuery="@SearchQuery" SearchQueryChanged="@HandleSearchQueryChanged" FilterFunction="@_filterFunction">
                     <BbCommandInput @ref="_commandInputRef" Placeholder="@EffectiveSearchPlaceholder" />
-                    <BbCommandList OnLoadMore="@OnLoadMore" IsLoading="@IsLoading" EndOfListMessage="@EndOfListMessage">
+                    <BbCommandList OnLoadMore="@OnLoadMore" IsLoading="@IsLoading" EndOfListMessage="@EndOfListMessage" Class="@ListClass">
                         <BbCommandEmpty>@EffectiveEmptyMessage</BbCommandEmpty>
                         @if (Options is not null)
                         {
