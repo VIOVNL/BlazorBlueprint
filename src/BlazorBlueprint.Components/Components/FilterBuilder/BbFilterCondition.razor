@@ -81,7 +81,7 @@
                               Value="@GetDatePreset()"
                               ValueChanged="HandleDatePresetChanged"
                               Options="@DatePresetOptions"
-                              Class="@ValueInputClass" />
+                              Class="@ValueSelectClass" />
                     break;
 
                 case FilterFieldType.Date or FilterFieldType.DateTime:
@@ -106,7 +106,7 @@
                               ValueChanged="HandleStringValueChanged"
                               Options="@(selectedField.Options ?? Array.Empty<SelectOption<string>>())"
                               Placeholder="@Localizer["FilterBuilder.SelectValue"]"
-                              Class="@ValueInputClass" />
+                              Class="@ValueSelectClass" />
                     break;
             }
         }

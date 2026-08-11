@@ -12,7 +12,7 @@
                            aria-required="@(Required ? "true" : null)"
                            disabled="@Disabled"
                            class="@ButtonCssClass">
-                <span class="@(Value is null ? "text-muted-foreground" : "")">
+                <span class="@(Value is null ? "min-w-0 truncate whitespace-nowrap text-start text-muted-foreground" : "min-w-0 truncate whitespace-nowrap text-start")">
                     @SelectedDisplayText
                 </span>
                 <svg xmlns="http://www.w3.org/2000/svg"

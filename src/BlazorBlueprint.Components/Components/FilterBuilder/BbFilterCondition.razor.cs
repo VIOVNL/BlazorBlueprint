@@ -294,9 +294,20 @@ public partial class BbFilterCondition : ComponentBase
         Context?.Compact == true ? "gap-1" : "gap-2"
     );
 
-    private string FieldSelectClass => Context?.Compact == true ? "w-[140px]" : "w-[160px]";
+    private string FieldSelectClass => ClassNames.cn(
+        "w-max max-w-full",
+        Context?.Compact == true ? "min-w-[140px]" : "min-w-[160px]"
+    );
 
-    private string OperatorSelectClass => Context?.Compact == true ? "w-[160px]" : "w-[180px]";
+    private string OperatorSelectClass => ClassNames.cn(
+        "w-max max-w-full",
+        Context?.Compact == true ? "min-w-[120px]" : "min-w-[128px]"
+    );
+
+    private string ValueSelectClass => ClassNames.cn(
+        "w-max max-w-full",
+        Context?.Compact == true ? "min-w-[140px]" : "min-w-[180px]"
+    );
 
     private string ValueInputClass => Context?.Compact == true ? "w-[140px]" : "w-[180px]";
 }
