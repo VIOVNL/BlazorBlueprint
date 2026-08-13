@@ -2,20 +2,36 @@
 @using BlazorBlueprint.Icons.Lucide.Components
 
 <BbPopover @bind-Open="_isOpen">
-    <BbPopoverTrigger AsChild="true">
-        <BbButton Variant="ButtonVariant.Outline"
-                Class="@ButtonCssClass"
-                Disabled="@Disabled">
-            <LucideIcon Name="calendar" Class="mr-2 h-4 w-4" />
-            @if (Value != null)
-            {
-                <span>@FormatRange(Value)</span>
-            }
-            else
-            {
-                <span class="text-muted-foreground">@EffectivePlaceholder</span>
-            }
-        </BbButton>
+    <BbPopoverTrigger AsChild="@true">
+        @if (Editable)
+        {
+            <BbDateRangePickerInput @key="_inputRevision"
+                                    StartText="@_startInputText"
+                                    EndText="@_endInputText"
+                                    InputPlaceholder="@DateFormat"
+                                    StartLabel="@StartLabel"
+                                    EndLabel="@EndLabel"
+                                    Disabled="@Disabled"
+                                    Class="@Class"
+                                    OnStartCommit="@HandleStartInputCommitAsync"
+                                    OnEndCommit="@HandleEndInputCommitAsync" />
+        }
+        else
+        {
+            <BbButton Variant="ButtonVariant.Outline"
+                    Class="@ButtonCssClass"
+                    Disabled="@Disabled">
+                <LucideIcon Name="calendar" Class="mr-2 h-4 w-4" />
+                @if (Value != null)
+                {
+                    <span>@FormatRange(Value)</span>
+                }
+                else
+                {
+                    <span class="text-muted-foreground">@EffectivePlaceholder</span>
+                }
+            </BbButton>
+        }
     </BbPopoverTrigger>
     <BbPopoverContent Class="w-[calc(100vw-6rem)] p-0" Align="@PopoverAlign.Start" data-drp>
         <div class="flex flex-col">

@@ -27,6 +27,22 @@ public partial class BbFormFieldDateRangePicker : FormFieldBase
     [Parameter]
     public string DateFormat { get; set; } = "d";
 
+    /// <summary>Gets or sets whether the range endpoints can be typed.</summary>
+    [Parameter]
+    public bool Editable { get; set; }
+
+    /// <summary>Gets or sets the accepted typed date formats.</summary>
+    [Parameter]
+    public string[]? InputFormats { get; set; }
+
+    /// <summary>Gets or sets the accessible start-date input label.</summary>
+    [Parameter]
+    public string StartLabel { get; set; } = "Start date";
+
+    /// <summary>Gets or sets the accessible end-date input label.</summary>
+    [Parameter]
+    public string EndLabel { get; set; } = "End date";
+
     /// <summary>
     /// Gets or sets the placeholder text when no range is selected.
     /// </summary>

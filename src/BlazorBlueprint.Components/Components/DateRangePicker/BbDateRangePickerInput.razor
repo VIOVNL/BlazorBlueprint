@@ -1,0 +1,81 @@
+@namespace BlazorBlueprint.Components
+@using BlazorBlueprint.Icons.Lucide.Components
+@using BlazorBlueprint.Primitives.Utilities
+
+<div @ref="_rootRef" class="@WrapperCssClass">
+    <input type="text"
+           class="min-w-0 flex-1 bg-transparent px-3 py-2 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+           value="@StartText"
+           placeholder="@InputPlaceholder"
+           aria-label="@StartLabel"
+           disabled="@Disabled"
+           @onchange="HandleStartChange" />
+    <span class="shrink-0 text-muted-foreground" aria-hidden="true">to</span>
+    <input type="text"
+           class="min-w-0 flex-1 bg-transparent px-3 py-2 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+           value="@EndText"
+           placeholder="@InputPlaceholder"
+           aria-label="@EndLabel"
+           disabled="@Disabled"
+           @onchange="HandleEndChange" />
+    <button type="button"
+            class="@ToggleCssClass"
+            aria-label="Open date range calendar"
+            aria-haspopup="@TriggerContext?.AriaHasPopup"
+            aria-expanded="@(TriggerContext?.IsOpen == true ? "true" : "false")"
+            aria-controls="@TriggerContext?.AriaControls"
+            disabled="@Disabled"
+            tabindex="@(Disabled ? -1 : 0)"
+            @onclick="HandleToggleClick">
+        <LucideIcon Name="calendar" Class="h-4 w-4" />
+    </button>
+</div>
+
+@code {
+    private ElementReference _rootRef;
+    private TriggerContext? _previousTriggerContext;
+
+    [CascadingParameter(Name = "TriggerContext")]
+    private TriggerContext? TriggerContext { get; set; }
+
+    [Parameter] public string? StartText { get; set; }
+    [Parameter] public string? EndText { get; set; }
+    [Parameter] public string? InputPlaceholder { get; set; }
+    [Parameter] public string StartLabel { get; set; } = "Start date";
+    [Parameter] public string EndLabel { get; set; } = "End date";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public EventCallback<string?> OnStartCommit { get; set; }
+    [Parameter] public EventCallback<string?> OnEndCommit { get; set; }
+
+    private string WrapperCssClass => ClassNames.cn(
+        "flex h-10 w-[360px] items-center rounded-md border border-input bg-background text-base md:text-sm",
+        "ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+        "transition-colors",
+        Disabled ? "cursor-not-allowed opacity-50" : null,
+        Class);
+
+    private string ToggleCssClass => ClassNames.cn(
+        "inline-flex h-full items-center justify-center px-3 text-muted-foreground",
+        "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "disabled:pointer-events-none",
+        TriggerContext is { IsOpen: true, SuppressPointerEventsWhenOpen: true } ? "pointer-events-none" : null);
+
+    private Task HandleStartChange(ChangeEventArgs args) =>
+        OnStartCommit.InvokeAsync(args.Value?.ToString());
+
+    private Task HandleEndChange(ChangeEventArgs args) =>
+        OnEndCommit.InvokeAsync(args.Value?.ToString());
+
+    private void HandleToggleClick() => TriggerContext?.Toggle?.Invoke();
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (TriggerContext?.SetTriggerElement != null
+            && (firstRender || TriggerContext != _previousTriggerContext))
+        {
+            TriggerContext.SetTriggerElement.Invoke(_rootRef);
+            _previousTriggerContext = TriggerContext;
+        }
+    }
+}

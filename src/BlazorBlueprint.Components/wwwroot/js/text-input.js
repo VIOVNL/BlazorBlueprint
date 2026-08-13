@@ -203,6 +203,17 @@ export function setValue(instanceId, value) {
 }
 
 /**
+ * Reads the browser's current value without changing the configured update timing.
+ * This lets a form commit a blur-based control before saving, even when the native
+ * change notification and the submit event cross the Blazor Server circuit together.
+ * @param {string} instanceId - The instance to read.
+ * @returns {string|null} The current element value, or null when the instance is gone.
+ */
+export function getValue(instanceId) {
+  return instances.get(instanceId)?.element.value ?? null;
+}
+
+/**
  * Removes event handlers and cleans up state.
  * @param {string} instanceId - The instance to dispose.
  */

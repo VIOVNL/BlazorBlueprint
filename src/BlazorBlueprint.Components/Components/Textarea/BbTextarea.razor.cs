@@ -409,6 +409,42 @@ public partial class BbTextarea : ComponentBase
     /// </summary>
     public ValueTask FocusAsync() => inputRef.FocusAsync();
 
+    /// <summary>
+    /// Commits the browser's current value to <see cref="Value"/> and
+    /// <see cref="ValueChanged"/> without enabling per-keystroke updates.
+    /// </summary>
+    /// <remarks>
+    /// Call this at the start of a form submit handler when the textarea uses the
+    /// default blur-based update timing. It closes the small race where the native
+    /// change event and the submit event reach a Blazor Server circuit together.
+    /// </remarks>
+    public async ValueTask<string?> CommitPendingValueAsync()
+    {
+        if (disposed || jsModule is null || !jsInitialized)
+        {
+            return Value;
+        }
+
+        try
+        {
+            var currentValue = await jsModule.InvokeAsync<string?>("getValue", instanceId);
+            if (!string.Equals(currentValue, Value, StringComparison.Ordinal))
+            {
+                await JsOnChange(currentValue);
+            }
+
+            return Value;
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException)
+        {
+            return Value;
+        }
+        catch (InvalidOperationException)
+        {
+            return Value;
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         disposed = true;

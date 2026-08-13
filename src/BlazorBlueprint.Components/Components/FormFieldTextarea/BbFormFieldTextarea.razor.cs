@@ -115,6 +115,13 @@ public partial class BbFormFieldTextarea : FormFieldBase
     /// </summary>
     public ValueTask FocusAsync() => _textareaRef?.FocusAsync() ?? ValueTask.CompletedTask;
 
+    /// <summary>
+    /// Commits the inner textarea's current browser value while preserving its
+    /// blur-based update behavior during ordinary typing.
+    /// </summary>
+    public ValueTask<string?> CommitPendingValueAsync() =>
+        _textareaRef?.CommitPendingValueAsync() ?? ValueTask.FromResult(Value);
+
     /// <inheritdoc />
     protected override LambdaExpression? GetFieldExpression() => ValueExpression;
 

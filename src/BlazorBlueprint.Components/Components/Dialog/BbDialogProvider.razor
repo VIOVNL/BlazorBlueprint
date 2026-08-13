@@ -134,12 +134,29 @@
             focusTrapDialogId = null;
         }
 
+        // The dialog stack can change while the previous JS focus trap is being
+        // disposed. Re-check it after that await instead of indexing a stale,
+        // now-empty collection.
+        if (disposed || DialogService.Dialogs.Count == 0)
+        {
+            return;
+        }
+
         var topmostDialog = DialogService.Dialogs[^1];
         if (contentRefs.TryGetValue(topmostDialog.Id, out var elementRef))
         {
             try
             {
-                focusTrap = await FocusManager.TrapFocus(elementRef);
+                var nextFocusTrap = await FocusManager.TrapFocus(elementRef);
+                if (disposed ||
+                    DialogService.Dialogs.Count == 0 ||
+                    DialogService.Dialogs[^1].Id != topmostDialog.Id)
+                {
+                    await nextFocusTrap.DisposeAsync();
+                    return;
+                }
+
+                focusTrap = nextFocusTrap;
                 focusTrapDialogId = topmostDialog.Id;
             }
             catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException)

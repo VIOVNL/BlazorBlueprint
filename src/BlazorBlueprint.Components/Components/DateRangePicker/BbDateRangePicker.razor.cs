@@ -8,6 +8,8 @@ namespace BlazorBlueprint.Components;
 /// </summary>
 public partial class BbDateRangePicker : ComponentBase
 {
+    private const string IsoInputFormat = "yyyy-MM-dd";
+
     [Inject] private IBbLocalizer Localizer { get; set; } = default!;
 
     private bool _isOpen;
@@ -15,6 +17,10 @@ public partial class BbDateRangePicker : ComponentBase
     private DateTime _displayMonth2;
     private DateTime? _selectionStart;
     private DateTime? _selectionEnd;
+    private string? _startInputText;
+    private string? _endInputText;
+    private string? _previousDateFormat;
+    private int _inputRevision;
 
     // OnParametersSet guard
     private DateRange? _previousValue;
@@ -147,6 +153,28 @@ public partial class BbDateRangePicker : ComponentBase
     public string DateFormat { get; set; } = "d";
 
     /// <summary>
+    /// When true, the trigger renders as two text inputs so both range endpoints can
+    /// be typed directly while retaining the calendar toggle.
+    /// </summary>
+    [Parameter]
+    public bool Editable { get; set; }
+
+    /// <summary>
+    /// Date formats accepted by the editable start and end inputs. When unset,
+    /// <see cref="DateFormat"/> is used. ISO yyyy-MM-dd is always accepted.
+    /// </summary>
+    [Parameter]
+    public string[]? InputFormats { get; set; }
+
+    /// <summary>Accessible label for the editable start-date input.</summary>
+    [Parameter]
+    public string StartLabel { get; set; } = "Start date";
+
+    /// <summary>Accessible label for the editable end-date input.</summary>
+    [Parameter]
+    public string EndLabel { get; set; } = "End date";
+
+    /// <summary>
     /// Placeholder text when no range is selected.
     /// </summary>
     [Parameter]
@@ -245,14 +273,18 @@ public partial class BbDateRangePicker : ComponentBase
             _selectionEnd = Value.End;
         }
         _previousValue = Value;
+        _previousDateFormat = DateFormat;
+        SyncInputTextFromSelection();
     }
 
     protected override void OnParametersSet()
     {
         _parametersChanged = true;
 
-        // Only sync when Value actually changes from external source
-        if (Value != _previousValue)
+        // Only sync when Value actually changes from external source.
+        var valueChanged = Value != _previousValue;
+        var formatChanged = !string.Equals(DateFormat, _previousDateFormat, StringComparison.Ordinal);
+        if (valueChanged)
         {
             _previousValue = Value;
             if (Value != null)
@@ -260,6 +292,17 @@ public partial class BbDateRangePicker : ComponentBase
                 _selectionStart = Value.Start;
                 _selectionEnd = Value.End;
             }
+            else
+            {
+                _selectionStart = null;
+                _selectionEnd = null;
+            }
+        }
+
+        if (valueChanged || formatChanged)
+        {
+            _previousDateFormat = DateFormat;
+            SyncInputTextFromSelection();
         }
 
         // Capture culture at parameter-set time so it's stable across render cycles
@@ -297,6 +340,124 @@ public partial class BbDateRangePicker : ComponentBase
 
     private string FormatRange(DateRange range) =>
         $"{range.Start.ToString(DateFormat, _resolvedCulture)} - {range.End.ToString(DateFormat, _resolvedCulture)}";
+
+    private void SyncInputTextFromSelection()
+    {
+        _startInputText = _selectionStart?.ToString(DateFormat, _resolvedCulture);
+        _endInputText = _selectionEnd?.ToString(DateFormat, _resolvedCulture);
+    }
+
+    private Task HandleStartInputCommitAsync(string? text) =>
+        HandleInputCommitAsync(text, isStart: true);
+
+    private Task HandleEndInputCommitAsync(string? text) =>
+        HandleInputCommitAsync(text, isStart: false);
+
+    private async Task HandleInputCommitAsync(string? text, bool isStart)
+    {
+        var trimmed = text?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            await Clear();
+            return;
+        }
+
+        var previousStart = _selectionStart;
+        var previousEnd = _selectionEnd;
+        if (!TryParseInput(trimmed, out var date) || IsDateDisabled(date))
+        {
+            await RevertRejectedInputAsync(trimmed, isStart);
+            return;
+        }
+
+        if (isStart)
+        {
+            _selectionStart = date.Date;
+
+            // While editing an existing range, the other endpoint still belongs
+            // to the previous range. If the new start crosses that stale end,
+            // keep the date the user typed and wait for a replacement end.
+            // DateRange.Create is still used once both edited endpoints form an
+            // ordered range, and calendar selections retain their swap behavior.
+            if (_selectionEnd.HasValue && _selectionStart > _selectionEnd)
+            {
+                _selectionEnd = null;
+            }
+        }
+        else
+        {
+            _selectionEnd = date.Date;
+
+            // Apply the same editing rule in the opposite direction so typing a
+            // new end before a stale start does not silently replace the value
+            // the user just entered.
+            if (_selectionStart.HasValue && _selectionEnd < _selectionStart)
+            {
+                _selectionStart = null;
+            }
+        }
+
+        if (_selectionStart.HasValue && _selectionEnd.HasValue)
+        {
+            var range = DateRange.Create(_selectionStart.Value, _selectionEnd.Value);
+            var selectedDays = CountSelectedDays(range.Start, range.End);
+            if ((MinDays.HasValue && selectedDays < MinDays.Value)
+                || (MaxDays.HasValue && selectedDays > MaxDays.Value))
+            {
+                _selectionStart = previousStart;
+                _selectionEnd = previousEnd;
+                await RevertRejectedInputAsync(trimmed, isStart);
+                return;
+            }
+
+            _selectionStart = range.Start;
+            _selectionEnd = range.End;
+            Value = range;
+            _previousValue = range;
+            SyncInputTextFromSelection();
+            await ValueChanged.InvokeAsync(range);
+            return;
+        }
+
+        SyncInputTextFromSelection();
+        _parametersChanged = true;
+    }
+
+    private Task RevertRejectedInputAsync(string rejectedText, bool isStart)
+    {
+        // The browser has already changed the input's DOM value. Re-key the small
+        // input component so the rejected text is replaced even when the render
+        // tree still contains the last valid value.
+        SyncInputTextFromSelection();
+        _inputRevision++;
+        _parametersChanged = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private bool TryParseInput(string text, out DateTime date)
+    {
+        var formats = InputFormats is { Length: > 0 } ? InputFormats : new[] { DateFormat };
+        foreach (var format in formats)
+        {
+            if (DateTime.TryParseExact(
+                    text,
+                    format,
+                    _resolvedCulture,
+                    DateTimeStyles.None,
+                    out date))
+            {
+                return true;
+            }
+        }
+
+        return DateTime.TryParseExact(
+            text,
+            IsoInputFormat,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out date);
+    }
 
     private void PreviousMonth()
     {
@@ -345,6 +506,7 @@ public partial class BbDateRangePicker : ComponentBase
                 // Reset selection
                 _selectionStart = date;
                 _selectionEnd = null;
+                SyncInputTextFromSelection();
                 return;
             }
             if (MaxDays.HasValue && days > MaxDays.Value)
@@ -352,6 +514,7 @@ public partial class BbDateRangePicker : ComponentBase
                 // Reset selection
                 _selectionStart = date;
                 _selectionEnd = null;
+                SyncInputTextFromSelection();
                 return;
             }
 
@@ -362,6 +525,8 @@ public partial class BbDateRangePicker : ComponentBase
                 await Apply();
             }
         }
+
+        SyncInputTextFromSelection();
     }
 
     private async Task Apply()
@@ -370,6 +535,8 @@ public partial class BbDateRangePicker : ComponentBase
         {
             var range = DateRange.Create(_selectionStart.Value, _selectionEnd.Value);
             Value = range;
+            _previousValue = range;
+            SyncInputTextFromSelection();
             await ValueChanged.InvokeAsync(range);
             _isOpen = false;
         }
@@ -383,6 +550,8 @@ public partial class BbDateRangePicker : ComponentBase
         _selectionStart = null;
         _selectionEnd = null;
         Value = null;
+        _previousValue = null;
+        SyncInputTextFromSelection();
         await ValueChanged.InvokeAsync(null);
         StateHasChanged();
     }
@@ -405,6 +574,7 @@ public partial class BbDateRangePicker : ComponentBase
         {
             _selectionStart = range.Start;
             _selectionEnd = range.End;
+            SyncInputTextFromSelection();
             _displayMonth1 = new DateTime(range.Start.Year, range.Start.Month, 1);
             _displayMonth2 = _displayMonth1.AddMonths(1);
             _cachedWeeksMonth1 = null;
@@ -535,7 +705,7 @@ public partial class BbDateRangePicker : ComponentBase
 
     private bool IsRangeEnd(DateTime date)
     {
-        if (!_selectionEnd.HasValue)
+        if (!_selectionStart.HasValue || !_selectionEnd.HasValue)
         {
             return false;
         }

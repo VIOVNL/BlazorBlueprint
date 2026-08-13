@@ -57,6 +57,9 @@
                 case FilterFieldType.Date or FilterFieldType.DateTime when FilterOperatorHelper.IsRangeOperator(Condition.Operator):
                     <BbDateRangePicker Value="@GetDateRangeValue()"
                                        ValueChanged="HandleDateRangeValueChanged"
+                                       DateFormat="dd-MM-yyyy"
+                                       Editable="@true"
+                                       InputFormats="@DateInputFormats"
                                        Class="@ValueInputClass" />
                     break;
 
@@ -88,6 +91,9 @@
                     <BbDatePicker Value="@GetDateTimeValue()"
                                   ValueChanged="HandleDateTimeValueChanged"
                                   Placeholder="@(selectedField.Placeholder ?? Localizer["FilterBuilder.PickDate"])"
+                                  DateFormat="dd-MM-yyyy"
+                                  Editable="@true"
+                                  InputFormats="@DateInputFormats"
                                   Class="@ValueInputClass" />
                     break;
 

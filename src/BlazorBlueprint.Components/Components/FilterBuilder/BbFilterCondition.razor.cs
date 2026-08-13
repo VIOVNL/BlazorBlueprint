@@ -7,6 +7,9 @@ namespace BlazorBlueprint.Components;
 /// </summary>
 public partial class BbFilterCondition : ComponentBase
 {
+    private static readonly string[] DateInputFormats =
+        ["dd-MM-yyyy", "d-M-yyyy", "dd/MM/yyyy", "d/M/yyyy"];
+
     private FilterField? selectedField;
     private IEnumerable<SelectOption<string>>? fieldOptions;
     private IEnumerable<SelectOption<FilterOperator>>? operatorOptions;
