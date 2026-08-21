@@ -167,6 +167,12 @@ public partial class BbMultiSelect<TValue> : ComponentBase, IAsyncDisposable
     public string? AriaDescribedBy { get; set; }
 
     /// <summary>
+    /// Gets or sets the accessible name announced for the multi-select trigger.
+    /// </summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    /// <summary>
     /// Gets or sets the maximum number of tags to display before showing "+N more".
     /// </summary>
     [Parameter]

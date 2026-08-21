@@ -232,6 +232,12 @@ public partial class BbCombobox<TValue> : ComponentBase
     public string? AriaDescribedBy { get; set; }
 
     /// <summary>
+    /// Gets or sets the accessible name announced for the combobox trigger.
+    /// </summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    /// <summary>
     /// Gets or sets the width of the popover content.
     /// </summary>
     /// <remarks>
@@ -456,8 +462,10 @@ public partial class BbCombobox<TValue> : ComponentBase
     /// <param name="option">The option that was selected.</param>
     private async Task HandleSelect(SelectOption<TValue> option)
     {
-        // Toggle behavior: if already selected, deselect
-        var newValue = EqualityComparer<TValue>.Default.Equals(Value, option.Value) ? default : option.Value;
+        // Optional comboboxes support reselect-to-clear. A required combobox must keep its
+        // current value when the user chooses that same option again.
+        var isAlreadySelected = EqualityComparer<TValue>.Default.Equals(Value, option.Value);
+        var newValue = isAlreadySelected && !Required ? default : option.Value;
 
         // Cache display text so it survives async Options changes where
         // the selected option may no longer be in the current results.

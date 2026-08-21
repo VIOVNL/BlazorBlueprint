@@ -50,6 +50,7 @@ public partial class BbTextarea : ComponentBase
     private bool externalValueSyncPending;
     private string? renderedValue;
     private string? lastUserValue;
+    private string? lastParameterValue;
     private readonly InputValidationBehavior validation = new();
 
     /// <summary>
@@ -278,14 +279,21 @@ public partial class BbTextarea : ComponentBase
         if (!renderedValueInitialized)
         {
             renderedValue = Value;
+            lastParameterValue = Value;
             renderedValueInitialized = true;
             return;
         }
 
-        if (!hasUserValue || !string.Equals(Value, lastUserValue, StringComparison.Ordinal))
+        if (!string.Equals(Value, lastParameterValue, StringComparison.Ordinal))
         {
-            renderedValue = Value;
-            externalValueSyncPending = jsInitialized;
+            lastParameterValue = Value;
+            if (!hasUserValue || !string.Equals(Value, lastUserValue, StringComparison.Ordinal))
+            {
+                renderedValue = Value;
+                externalValueSyncPending = jsInitialized;
+                hasUserValue = false;
+                lastUserValue = null;
+            }
         }
     }
 
@@ -427,7 +435,7 @@ public partial class BbTextarea : ComponentBase
 
         try
         {
-            var currentValue = await jsModule.InvokeAsync<string?>("getValue", instanceId);
+            var currentValue = await jsModule.InvokeAsync<string?>("getElementValue", inputRef);
             if (!string.Equals(currentValue, Value, StringComparison.Ordinal))
             {
                 await JsOnChange(currentValue);

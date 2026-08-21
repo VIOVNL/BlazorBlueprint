@@ -6,7 +6,8 @@
                                                          OnClick="@OnClick"
                                                          CloseOnSelect="@CloseOnSelect"
                                                          Href="@Href"
-                                                         Target="@Target">
+                                                         Target="@Target"
+                                                         @attributes="AdditionalAttributes">
     @if (Icon != null)
     {
         <span class="mr-2 h-4 w-4 shrink-0 [&>svg]:h-4 [&>svg]:w-4">@Icon</span>
@@ -62,6 +63,12 @@
     /// </summary>
     [Parameter]
     public bool CloseOnSelect { get; set; } = true;
+
+    /// <summary>
+    /// Additional DOM attributes forwarded to the interactive menu item.
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string CssClass => ClassNames.cn(
         "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5",

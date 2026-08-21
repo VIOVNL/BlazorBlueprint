@@ -5,6 +5,7 @@
     <div class="@ContainerClass">
         <BbPopover Open="_isOpen" OpenChanged="HandleOpenChanged" RestoreFocusOnClose="_restoreFocusOnClose">
             <BbPopoverTrigger AsChild="false" role="combobox"
+                           aria-label="@AriaLabel"
                            aria-expanded="@GetIsOpen().ToString().ToLower()"
                            aria-controls="@($"{Id}-listbox")"
                            aria-haspopup="listbox"

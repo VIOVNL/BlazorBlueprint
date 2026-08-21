@@ -214,6 +214,17 @@ export function getValue(instanceId) {
 }
 
 /**
+ * Reads the value from the element reference supplied by the current Blazor render.
+ * This remains correct when a portal host has remounted the DOM element while the
+ * component instance and its JavaScript registration are still being reused.
+ * @param {HTMLInputElement|HTMLTextAreaElement|null} element - Current rendered element.
+ * @returns {string|null} The current browser value.
+ */
+export function getElementValue(element) {
+  return element?.value ?? null;
+}
+
+/**
  * Removes event handlers and cleans up state.
  * @param {string} instanceId - The instance to dispose.
  */

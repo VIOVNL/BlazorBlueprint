@@ -1,4 +1,5 @@
 @namespace BlazorBlueprint.Primitives.Dialog
+@implements IDisposable
 
 @* Dialog primitive root component - headless, unstyled behavior only *@
 <CascadingValue Value="@_context" IsFixed="false">
@@ -57,7 +58,7 @@
         {
             ControlledValue = Open.HasValue ? Open.Value : DefaultOpen,
             OnValueChanged = OpenChanged,
-            IsControlled = OpenChanged.HasDelegate
+            IsControlled = Open.HasValue
         };
 
         // Sync initial state to context
@@ -72,8 +73,20 @@
         // Update controlled value if it changed
         if (_state.IsControlled && Open.HasValue)
         {
-            _state.ControlledValue = Open.Value;
-            _context.State.IsOpen = Open.Value;
+            var controlledIsOpen = Open.Value;
+            _state.ControlledValue = controlledIsOpen;
+
+            if (_context.State.IsOpen != controlledIsOpen)
+            {
+                if (controlledIsOpen)
+                {
+                    _context.Open();
+                }
+                else
+                {
+                    _context.Close();
+                }
+            }
         }
     }
 

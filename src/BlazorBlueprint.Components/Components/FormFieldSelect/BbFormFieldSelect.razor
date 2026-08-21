@@ -6,7 +6,7 @@
 <BbField Orientation="@Orientation" IsInvalid="@IsInvalid" Class="@Class">
     @if (Label is not null)
     {
-        <BbFieldLabel>@Label</BbFieldLabel>
+        <BbFieldLabel For="@ControlId">@Label</BbFieldLabel>
     }
     <BbFieldContent>
         <BbSelect TValue="TValue"
