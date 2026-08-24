@@ -5,7 +5,7 @@
 <button id="@_triggerId"
         type="button"
         role="tab"
-        aria-selected="@_isSelected"
+        aria-selected="@(_isSelected ? "true" : "false")"
         aria-controls="@_contentId"
         data-state="@(_isSelected ? "active" : "inactive")"
         tabindex="@_tabIndex"

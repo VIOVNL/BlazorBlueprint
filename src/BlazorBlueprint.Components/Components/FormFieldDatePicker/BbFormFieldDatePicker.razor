@@ -4,7 +4,7 @@
 <BbField Orientation="@Orientation" IsInvalid="@IsInvalid" Class="@Class">
     @if (Label is not null)
     {
-        <BbFieldLabel>@Label</BbFieldLabel>
+        <BbFieldLabel For="@ControlId">@Label</BbFieldLabel>
     }
     <BbFieldContent>
         <BbDatePicker Value="@Value"
@@ -20,6 +20,9 @@
                       InputFormats="@InputFormats"
                       Disabled="@Disabled"
                       Required="@Required"
+                      Id="@ControlId"
+                      AriaLabel="@(AriaLabel ?? Label)"
+                      AriaDescribedBy="@DescribedById"
                       Class="@InputClass" />
         @if (!string.IsNullOrEmpty(HelperText) && !IsInvalid)
         {

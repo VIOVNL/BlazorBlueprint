@@ -15,7 +15,7 @@
                  class="@CssClass">
     @if (Options is not null)
     {
-        <BbSelectTrigger TValue="TValue">
+        <BbSelectTrigger TValue="TValue" aria-label="@AriaLabel">
             <BbSelectValue Placeholder="@Placeholder" />
         </BbSelectTrigger>
         <BbSelectContent TValue="TValue" OnLoadMore="@OnLoadMore" IsLoading="@IsLoading" EndOfListMessage="@EndOfListMessage">
@@ -113,6 +113,12 @@
     /// </summary>
     [Parameter]
     public string? Placeholder { get; set; }
+
+    /// <summary>
+    /// Accessible name applied to the select trigger when no associated form label owns it.
+    /// </summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user scrolls near the bottom of the dropdown list.

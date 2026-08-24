@@ -16,6 +16,9 @@
                                Placeholder="@EffectivePlaceholder"
                                Disabled="@Disabled"
                                Required="@Required"
+                               Id="@Id"
+                               AriaLabel="@AriaLabel"
+                               AriaDescribedBy="@AriaDescribedBy"
                                Class="@Class"
                                OnCommit="HandleInputCommit" />
         }
@@ -23,6 +26,9 @@
         {
             <BbButton Variant="ButtonVariant.Outline"
                     Class="@ButtonCssClass"
+                    id="@Id"
+                    AriaLabel="@AriaLabel"
+                    aria-describedby="@AriaDescribedBy"
                     aria-required="@(Required ? "true" : null)">
                 <LucideIcon Name="calendar" Class="mr-2 h-4 w-4" />
                 @if (Value.HasValue)
@@ -166,6 +172,24 @@
     /// </summary>
     [Parameter]
     public bool Required { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTML id of the editable input or non-editable trigger.
+    /// </summary>
+    [Parameter]
+    public string? Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the accessible name of the date input or trigger.
+    /// </summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the element ids that describe the date input or trigger.
+    /// </summary>
+    [Parameter]
+    public string? AriaDescribedBy { get; set; }
 
     /// <summary>
     /// Additional CSS classes to apply to the trigger button.

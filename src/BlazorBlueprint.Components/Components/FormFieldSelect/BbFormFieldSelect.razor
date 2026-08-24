@@ -17,7 +17,7 @@
                 Required="@Required"
                 DisplayTextSelector="@GetEffectiveDisplayTextSelector()"
                 Class="@InputClass">
-            <BbSelectTrigger TValue="TValue" id="@ControlId" aria-describedby="@DescribedById">
+            <BbSelectTrigger TValue="TValue" id="@ControlId" aria-label="@AriaLabel" aria-describedby="@DescribedById">
                 <BbSelectValue Placeholder="@Placeholder" />
             </BbSelectTrigger>
             <BbSelectContent TValue="TValue" OnLoadMore="@OnLoadMore" IsLoading="@IsLoading" EndOfListMessage="@EndOfListMessage">

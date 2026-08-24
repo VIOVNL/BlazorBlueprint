@@ -4,7 +4,7 @@
 <BbField Orientation="@Orientation" IsInvalid="@IsInvalid" Class="@Class">
     @if (Label is not null)
     {
-        <BbFieldLabel>@Label</BbFieldLabel>
+        <BbFieldLabel For="@ControlId">@Label</BbFieldLabel>
     }
     <BbFieldContent>
         <BbFileUpload @ref="fileUploadRef"
@@ -17,6 +17,10 @@
                       ShowPreview="@ShowPreview"
                       Disabled="@Disabled"
                       Required="@Required"
+                      Id="@ControlId"
+                      aria-label="@AriaLabel"
+                      aria-describedby="@DescribedById"
+                      aria-invalid="@(IsInvalid ? "true" : null)"
                       OnValidationError="@OnValidationError"
                       DropzoneContent="@DropzoneContent"
                       Class="@InputClass" />

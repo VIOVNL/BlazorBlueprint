@@ -201,7 +201,10 @@ export function initializeEditor(element, dotNetRef, editorId, options) {
         placeholder: options?.placeholder || '',
         readOnly: options?.readOnly || false,
         enableSoftBreaks: options?.enableSoftBreaks === true,
-        normalizePastedText: options?.normalizePastedText === true
+        normalizePastedText: options?.normalizePastedText === true,
+        ariaLabel: options?.ariaLabel || '',
+        ariaDescribedBy: options?.ariaDescribedBy || '',
+        ariaInvalid: options?.ariaInvalid
     };
     if (normalizedOptions.enableSoftBreaks && !registerSoftBreakBlot()) {
         console.error('Unable to register the Quill soft-break format.');
@@ -243,6 +246,17 @@ export function initializeEditor(element, dotNetRef, editorId, options) {
     };
 
     const quill = new globalThis.Quill(element, quillOptions);
+    quill.root.setAttribute('role', 'textbox');
+    quill.root.setAttribute('aria-multiline', 'true');
+    if (normalizedOptions.ariaLabel) {
+        quill.root.setAttribute('aria-label', normalizedOptions.ariaLabel);
+    }
+    if (normalizedOptions.ariaDescribedBy) {
+        quill.root.setAttribute('aria-describedby', normalizedOptions.ariaDescribedBy);
+    }
+    if (normalizedOptions.ariaInvalid !== null && normalizedOptions.ariaInvalid !== undefined) {
+        quill.root.setAttribute('aria-invalid', String(normalizedOptions.ariaInvalid).toLowerCase());
+    }
     attachClipboardMatchers(quill, normalizedOptions);
 
     const state = {

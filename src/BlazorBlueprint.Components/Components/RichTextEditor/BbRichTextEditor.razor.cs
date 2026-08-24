@@ -728,7 +728,10 @@ public partial class BbRichTextEditor : ComponentBase, IAsyncDisposable
         placeholder = Placeholder ?? "",
         readOnly = Disabled || ReadOnly,
         enableSoftBreaks = EnableSoftBreaks,
-        normalizePastedText = NormalizePastedText
+        normalizePastedText = NormalizePastedText,
+        ariaLabel = AriaLabel,
+        ariaDescribedBy = AriaDescribedBy,
+        ariaInvalid = AriaInvalid
     };
 
     // === CSS Classes ===

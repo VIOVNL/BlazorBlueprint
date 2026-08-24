@@ -1,26 +1,41 @@
 @namespace BlazorBlueprint.Components
 @implements IDisposable
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 @* CommandItem - selectable item in the command list *@
 @if (_isVisible)
 {
-    <div id="@_itemId"
-         role="option"
-         aria-selected="@(_isFocused ? "true" : "false")"
-         aria-disabled="@(Disabled ? "true" : "false")"
-         data-focused="@(_isFocused ? "true" : "false")"
-         data-disabled="@(Disabled ? "true" : "false")"
-         @onclick="HandleClick"
-         @onmouseenter="HandleMouseEnter"
-         @onmousemove="HandleMouseMove"
-         class="@CssClass">
-        @if (Icon != null)
-        {
-            <span class="mr-2 h-4 w-4 shrink-0 [&>svg]:h-4 [&>svg]:w-4">@Icon</span>
-        }
-        @ChildContent
-    </div>
+    @if (!string.IsNullOrWhiteSpace(Href))
+    {
+        <a id="@_itemId"
+           href="@Href"
+           role="option"
+           aria-selected="@(_isFocused ? "true" : "false")"
+           aria-disabled="@(Disabled ? "true" : "false")"
+           data-focused="@(_isFocused ? "true" : "false")"
+           data-disabled="@(Disabled ? "true" : "false")"
+           @onmouseenter="HandleMouseEnter"
+           @onmousemove="HandleMouseMove"
+           class="@CssClass">
+            @ItemContent
+        </a>
+    }
+    else
+    {
+        <div id="@_itemId"
+             role="option"
+             aria-selected="@(_isFocused ? "true" : "false")"
+             aria-disabled="@(Disabled ? "true" : "false")"
+             data-focused="@(_isFocused ? "true" : "false")"
+             data-disabled="@(Disabled ? "true" : "false")"
+             @onclick="HandleClick"
+             @onmouseenter="HandleMouseEnter"
+             @onmousemove="HandleMouseMove"
+             class="@CssClass">
+            @ItemContent
+        </div>
+    }
 }
 
 @code {
@@ -55,6 +70,14 @@
     public string? Value { get; set; }
 
     /// <summary>
+    /// Optional navigation destination activated after this command is selected.
+    /// This remains reliable when a dynamic result list replaces its registered
+    /// command metadata between rendering and the browser click.
+    /// </summary>
+    [Parameter]
+    public string? Href { get; set; }
+
+    /// <summary>
     /// Gets or sets whether this item is disabled.
     /// </summary>
     [Parameter]
@@ -78,6 +101,14 @@
     private bool _isFocused;
     private bool _isVisible = true;
     private bool _shouldScrollIntoView;
+
+    private RenderFragment ItemContent => @<text>
+        @if (Icon != null)
+        {
+            <span class="mr-2 h-4 w-4 shrink-0 [&>svg]:h-4 [&>svg]:w-4">@Icon</span>
+        }
+        @ChildContent
+    </text>;
 
     /// <summary>
     /// Gets the computed CSS classes for the item.
@@ -140,6 +171,10 @@
         if (Disabled || Context == null) return;
 
         await Context.SelectItemByValueAsync(Value ?? string.Empty);
+        if (!string.IsNullOrWhiteSpace(Href))
+        {
+            Navigation.NavigateTo(Href);
+        }
     }
 
     private void HandleMouseMove()

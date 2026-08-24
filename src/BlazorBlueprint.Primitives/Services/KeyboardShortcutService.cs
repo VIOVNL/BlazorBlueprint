@@ -40,24 +40,35 @@ public class KeyboardShortcutService : IKeyboardShortcutService
     /// <inheritdoc />
     public async Task<IDisposable> RegisterAsync(string shortcut, Func<Task> callback, string id)
     {
-        ObjectDisposedException.ThrowIf(_disposed, nameof(KeyboardShortcutService));
-
         var parsed = KeyboardShortcut.Parse(shortcut);
         var normalizedKey = parsed.GetNormalizedKey();
 
-        await EnsureInitializedAsync();
-
-        // Register with the service
-        var registration = new ShortcutRegistration(id, parsed, callback);
-        _shortcuts[normalizedKey] = registration;
-
-        // Register with JavaScript
-        if (_module != null)
+        await _moduleLock.WaitAsync();
+        try
         {
-            await _module.InvokeVoidAsync("registerShortcut", normalizedKey);
-        }
+            if (_disposed)
+            {
+                return EmptyShortcutHandle.Instance;
+            }
 
-        return new ShortcutHandle(this, normalizedKey, id);
+            await EnsureInitializedCoreAsync();
+
+            // Register with the service
+            var registration = new ShortcutRegistration(id, parsed, callback);
+            _shortcuts[normalizedKey] = registration;
+
+            // Register with JavaScript
+            if (_module != null)
+            {
+                await _module.InvokeVoidAsync("registerShortcut", normalizedKey);
+            }
+
+            return new ShortcutHandle(this, normalizedKey, id);
+        }
+        finally
+        {
+            _moduleLock.Release();
+        }
     }
 
     /// <inheritdoc />
@@ -112,54 +123,53 @@ public class KeyboardShortcutService : IKeyboardShortcutService
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_disposed)
+        await _moduleLock.WaitAsync();
+        try
         {
-            return;
+            if (_disposed)
+            {
+                return;
+            }
+
+            GC.SuppressFinalize(this);
+            _disposed = true;
+            _shortcuts.Clear();
+
+            if (_module != null)
+            {
+                try
+                {
+                    await _module.InvokeVoidAsync("dispose");
+                    await _module.DisposeAsync();
+                }
+                catch
+                {
+                    // Module may already be disposed (e.g., during page navigation)
+                }
+
+                _module = null;
+            }
+
+            _dotNetRef?.Dispose();
+            _dotNetRef = null;
         }
-
-        GC.SuppressFinalize(this);
-        _disposed = true;
-        _shortcuts.Clear();
-
-        if (_module != null)
+        finally
         {
-            try
-            {
-                await _module.InvokeVoidAsync("dispose");
-                await _module.DisposeAsync();
-            }
-            catch
-            {
-                // Module may already be disposed (e.g., during page navigation)
-            }
+            _moduleLock.Release();
         }
-
-        _dotNetRef?.Dispose();
-        _moduleLock.Dispose();
     }
 
-    private async Task EnsureInitializedAsync()
+    private async Task EnsureInitializedCoreAsync()
     {
         if (_module != null)
         {
             return;
         }
 
-        await _moduleLock.WaitAsync();
-        try
-        {
-            if (_module == null)
-            {
-                _dotNetRef = DotNetObjectReference.Create(this);
-                _module = await _jsRuntime.InvokeAsync<IJSObjectReference>(
-                    "import", "./_content/BlazorBlueprint.Primitives/js/primitives/keyboard-shortcuts.js");
-                await _module.InvokeVoidAsync("initialize", _dotNetRef);
-            }
-        }
-        finally
-        {
-            _moduleLock.Release();
-        }
+        _dotNetRef = DotNetObjectReference.Create(this);
+        _module = await _jsRuntime.InvokeAsync<IJSObjectReference>(
+            "import", "./_content/BlazorBlueprint.Primitives/js/primitives/keyboard-shortcuts.js");
+        await _module.InvokeVoidAsync("initialize", _dotNetRef);
     }
 
     private void UnregisterInternal(string normalizedKey)
@@ -212,6 +222,15 @@ public class KeyboardShortcutService : IKeyboardShortcutService
             {
                 _service.UnregisterInternal(_normalizedKey);
             }
+        }
+    }
+
+    private sealed class EmptyShortcutHandle : IDisposable
+    {
+        public static EmptyShortcutHandle Instance { get; } = new();
+
+        public void Dispose()
+        {
         }
     }
 }

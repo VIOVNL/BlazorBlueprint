@@ -5,10 +5,13 @@
 
 <div @ref="_rootRef" class="@WrapperCssClass">
     <input type="text"
+           id="@Id"
            class="flex-1 min-w-0 bg-transparent px-3 py-2 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
            value="@Text"
            placeholder="@Placeholder"
            disabled="@Disabled"
+           aria-label="@AriaLabel"
+           aria-describedby="@AriaDescribedBy"
            aria-required="@(Required ? "true" : null)"
            aria-invalid="@(IsInvalid ? "true" : null)"
            @onchange="HandleChange"
@@ -56,6 +59,24 @@
     /// </summary>
     [Parameter]
     public bool Required { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTML id of the text input.
+    /// </summary>
+    [Parameter]
+    public string? Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the accessible name of the text input.
+    /// </summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the element ids that describe the text input.
+    /// </summary>
+    [Parameter]
+    public string? AriaDescribedBy { get; set; }
 
     /// <summary>
     /// Whether the field is in an invalid state (sets aria-invalid).

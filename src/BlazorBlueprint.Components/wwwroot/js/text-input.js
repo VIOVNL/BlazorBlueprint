@@ -40,16 +40,16 @@ export function initialize(element, dotNetRef, instanceId, config) {
     config,
     debounceTimer: null,
     rafId: null,
-    pendingValue: null
+    pendingValue: null,
+    userEdited: false
   };
 
   const callOnInput = (value) => {
     dotNetRef.invokeMethodAsync('JsOnInput', value).catch(() => {});
   };
 
-  const callOnChange = (value) => {
+  const callOnChange = (value) =>
     dotNetRef.invokeMethodAsync('JsOnChange', value).catch(() => {});
-  };
 
   const updateCharacterCount = () => {
     if (!config.hasCharacterCount || !config.characterCountSelector) {
@@ -87,6 +87,9 @@ export function initialize(element, dotNetRef, instanceId, config) {
     updateCharacterCount();
 
     if (config.mode === 'onchange') {
+      // Protect locally typed text from an unrelated parent render until the
+      // native change notification has reached the Blazor Server circuit.
+      state.userEdited = true;
       return;
     }
 
@@ -121,7 +124,12 @@ export function initialize(element, dotNetRef, instanceId, config) {
 
   const handleChange = () => {
     cancelPending();
-    callOnChange(element.value);
+    const committedValue = element.value;
+    callOnChange(committedValue).finally(() => {
+      if (element.value === committedValue) {
+        state.userEdited = false;
+      }
+    });
   };
 
   const guard = createCompositionGuard(element, { onFlush: handleInput });
@@ -168,6 +176,7 @@ export function initialize(element, dotNetRef, instanceId, config) {
   }
 
   instances.set(instanceId, stored);
+  element.dataset.bbInputReady = 'true';
 }
 
 /**
@@ -191,6 +200,10 @@ export function updateConfig(instanceId, config) {
 export function setValue(instanceId, value) {
   const stored = instances.get(instanceId);
   if (!stored) {
+    return;
+  }
+
+  if (stored.state.userEdited) {
     return;
   }
 
@@ -233,6 +246,8 @@ export function dispose(instanceId) {
   if (!stored) {
     return;
   }
+
+  delete stored.element.dataset.bbInputReady;
 
   stored.element.removeEventListener('input', stored.handleInput);
   stored.element.removeEventListener('change', stored.handleChange);
