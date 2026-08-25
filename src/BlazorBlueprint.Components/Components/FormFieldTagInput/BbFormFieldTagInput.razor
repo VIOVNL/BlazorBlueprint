@@ -24,7 +24,7 @@
                     Clearable="@Clearable"
                     Disabled="@Disabled"
                     TagTemplate="@TagTemplate"
-                    AriaLabel="@AriaLabel"
+                    AriaLabel="@(AriaLabel ?? Label)"
                     Class="@InputClass" />
         @if (!string.IsNullOrEmpty(HelperText) && !IsInvalid)
         {

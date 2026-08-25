@@ -310,6 +310,20 @@ export function updateConfig(instanceId, config) {
 }
 
 /**
+ * Reflects a value bounded by .NET back into the browser's live input property.
+ * Updating the rendered value attribute alone is insufficient after the user has
+ * edited the property, because browsers deliberately preserve that live value.
+ * @param {string} instanceId - The instance to update.
+ * @param {string} value - The normalized value to display.
+ */
+export function setValue(instanceId, value) {
+  const stored = instances.get(instanceId);
+  if (stored) {
+    stored.element.value = value ?? '';
+  }
+}
+
+/**
  * Removes event handlers and cleans up state.
  * @param {string} instanceId - The instance to dispose.
  */

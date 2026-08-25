@@ -382,6 +382,7 @@ public partial class BbDateRangePicker : ComponentBase
             if (_selectionEnd.HasValue && _selectionStart > _selectionEnd)
             {
                 _selectionEnd = null;
+                await InvalidateIncompleteRangeAsync();
             }
         }
         else
@@ -394,6 +395,7 @@ public partial class BbDateRangePicker : ComponentBase
             if (_selectionStart.HasValue && _selectionEnd < _selectionStart)
             {
                 _selectionStart = null;
+                await InvalidateIncompleteRangeAsync();
             }
         }
 
@@ -421,6 +423,16 @@ public partial class BbDateRangePicker : ComponentBase
 
         SyncInputTextFromSelection();
         _parametersChanged = true;
+    }
+
+    private async Task InvalidateIncompleteRangeAsync()
+    {
+        // Once one edited endpoint crosses the other, the old complete range must not remain
+        // bound invisibly. Clear the bound value so a containing EditForm rejects submission
+        // until the user supplies the missing endpoint.
+        Value = null;
+        _previousValue = null;
+        await ValueChanged.InvokeAsync(null);
     }
 
     private Task RevertRejectedInputAsync(string rejectedText, bool isStart)

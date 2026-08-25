@@ -83,6 +83,12 @@ public partial class BbFormFieldInput<TValue> : FormFieldBase
     public string? Placeholder { get; set; }
 
     /// <summary>
+    /// Gets or sets the maximum number of characters accepted by text-like inputs.
+    /// </summary>
+    [Parameter]
+    public int? MaxLength { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the input is disabled.
     /// </summary>
     [Parameter]

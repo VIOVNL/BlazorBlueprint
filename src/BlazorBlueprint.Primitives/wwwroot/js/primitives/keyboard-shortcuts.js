@@ -49,12 +49,14 @@ export function dispose() {
  * @param {KeyboardEvent} event - The keyboard event
  */
 function handleKeyDown(event) {
-    // Skip if target is an input element (user is typing)
-    if (shouldSkipEvent(event)) {
+    const normalizedKey = getNormalizedKey(event);
+
+    // Plain keystrokes still belong to an active editor. Registered Ctrl/Cmd
+    // shortcuts are application commands and must remain available when an
+    // input retains focus (including after a command dialog is dismissed).
+    if (shouldSkipEvent(event) && !event.ctrlKey && !event.metaKey) {
         return;
     }
-
-    const normalizedKey = getNormalizedKey(event);
 
     if (registeredShortcuts.has(normalizedKey)) {
         event.preventDefault();

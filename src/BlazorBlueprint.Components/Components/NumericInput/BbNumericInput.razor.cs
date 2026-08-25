@@ -367,6 +367,12 @@ public partial class BbNumericInput<TValue> : ComponentBase where TValue : struc
         if (TryParseValue(inputValue, out var parsedValue))
         {
             var clampedValue = ClampValue(parsedValue);
+            if (!clampedValue.Equals(parsedValue))
+            {
+                editingValue = Convert.ToString(clampedValue, CultureInfo.InvariantCulture)
+                               ?? string.Empty;
+                await SetBrowserValueAsync(editingValue);
+            }
             if (!clampedValue.Equals(Value))
             {
                 Value = clampedValue;
@@ -399,9 +405,36 @@ public partial class BbNumericInput<TValue> : ComponentBase where TValue : struc
             // Always fire on blur to ensure parent is in sync
             await ValueChanged.InvokeAsync(clampedValue);
             NotifyFieldChanged();
+            if (!clampedValue.Equals(parsedValue))
+            {
+                editingValue = Convert.ToString(clampedValue, CultureInfo.InvariantCulture)
+                               ?? string.Empty;
+                await SetBrowserValueAsync(editingValue);
+            }
         }
 
         StateHasChanged();
+    }
+
+    private async ValueTask SetBrowserValueAsync(string value)
+    {
+        if (!jsInitialized || jsModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await jsModule.InvokeVoidAsync("setValue", instanceId, value);
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
+            // The browser circuit ended while the bounded value was being reflected.
+        }
+        catch (InvalidOperationException)
+        {
+            // JS interop is unavailable during prerendering.
+        }
     }
 
     /// <summary>
