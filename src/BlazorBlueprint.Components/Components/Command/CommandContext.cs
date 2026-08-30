@@ -781,7 +781,7 @@ public class CommandContext
     /// <summary>
     /// Selects an item by its value.
     /// </summary>
-    public async Task SelectItemByValueAsync(string value)
+    public async Task SelectItemByValueAsync(string? value)
     {
         var item = _items.FirstOrDefault(i => i != null && i.Value == value);
         if (item != null && !item.Disabled)

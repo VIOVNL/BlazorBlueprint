@@ -3243,6 +3243,8 @@ public partial class BbDataGrid<TData> : ComponentBase, IAsyncDisposable where T
         EffectiveState.SetItemKey(ItemKey);
     }
 
+    private object GetRowKey(TData item) => ItemKey?.Invoke(item) ?? item;
+
     private SelectionMode GetPrimitiveSelectionMode() => SelectionMode switch
     {
         DataTableSelectionMode.Single => Primitives.Table.SelectionMode.Single,

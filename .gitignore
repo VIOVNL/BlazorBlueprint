@@ -46,6 +46,7 @@ NUL
 
 # Published output
 publish/
+**/artifacts/
 
 # Development Tools
 .claude

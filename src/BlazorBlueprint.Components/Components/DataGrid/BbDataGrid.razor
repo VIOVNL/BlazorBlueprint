@@ -454,7 +454,7 @@
     }
 
     private RenderFragment<TData> RenderDataRow => item =>
-        @<BlazorBlueprint.Primitives.DataGrid.BbDataGridRow TData="TData" Item="@item"
+        @<BlazorBlueprint.Primitives.DataGrid.BbDataGridRow @key="@GetRowKey(item)" TData="TData" Item="@item"
             Class="@ClassNames.cn("group/row bg-background", Striped ? StripeClass : null, RowClass?.Invoke(item))">
             @foreach (var column in _cachedVisibleColumns)
             {

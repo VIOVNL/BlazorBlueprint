@@ -170,7 +170,7 @@
     {
         if (Disabled || Context == null) return;
 
-        await Context.SelectItemByValueAsync(Value ?? string.Empty);
+        await Context.SelectItemByValueAsync(Value);
         if (!string.IsNullOrWhiteSpace(Href))
         {
             Navigation.NavigateTo(Href);
