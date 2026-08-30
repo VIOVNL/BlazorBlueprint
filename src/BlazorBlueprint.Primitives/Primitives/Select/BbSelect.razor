@@ -229,16 +229,15 @@
     /// </summary>
     private string? GetDisplayText(TValue? value)
     {
-        if (value == null)
-        {
-            return null;
-        }
-
         if (DisplayTextSelector != null)
         {
             try
             {
-                return DisplayTextSelector(value);
+                // TValue itself can be nullable. In that case a null value can be a
+                // real, labelled option (for example "All regions"), rather than an
+                // absent selection. Let the selector resolve it before falling back
+                // to the placeholder.
+                return DisplayTextSelector(value!);
             }
             catch
             {
@@ -248,7 +247,7 @@
             }
         }
 
-        return value.ToString();
+        return value?.ToString();
     }
 
     public void Dispose()
