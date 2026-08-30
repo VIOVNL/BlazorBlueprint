@@ -15,7 +15,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <!-- Local integration-test output must never become an SDK content item. -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)/TestResults/**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)/TestResults/**;$(MSBuildProjectDirectory)/artifacts/**</DefaultItemExcludes>
     <!-- Suppress missing XML comment warnings for internal enums and lifecycle methods -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
