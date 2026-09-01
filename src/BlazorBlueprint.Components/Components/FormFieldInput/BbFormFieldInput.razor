@@ -2,7 +2,7 @@
 @typeparam TValue
 @inherits FormFieldBase
 
-<BbField Orientation="@Orientation" IsInvalid="@IsInvalid" Class="@Class">
+<BbField Orientation="@Orientation" IsInvalid="@IsInvalid" Class="@Class" data-ui-field="@EffectiveFieldId">
     @if (Label is not null)
     {
         <BbFieldLabel For="@ControlId">@Label</BbFieldLabel>

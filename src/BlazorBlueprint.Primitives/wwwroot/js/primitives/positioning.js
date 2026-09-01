@@ -222,6 +222,28 @@ export async function autoUpdate(reference, floating, options = {}) {
     // Initial position
     await update();
 
+        // The initial calculation awaits layout and can overlap a Blazor
+        // render that removes either element. Floating UI dereferences the
+        // reference context synchronously while registering observers, so a
+        // second readiness check is required after that await. Return the
+        // normal disposable shape with a no-op cleanup; callers can dispose it
+        // exactly like an active registration without receiving a console or
+        // JS interop error during legitimate component teardown.
+        if (!isElementReady(reference) || !isElementReady(floating)) {
+            const id = crypto.randomUUID();
+            cleanupRegistry.set(id, () => {});
+            return {
+                _cleanupId: id,
+                apply: function() {
+                    const cleanup = cleanupRegistry.get(this._cleanupId);
+                    if (cleanup) {
+                        cleanup();
+                        cleanupRegistry.delete(this._cleanupId);
+                    }
+                }
+            };
+        }
+
         // Set up auto-update - this returns a cleanup function
         const cleanupFunc = lib.autoUpdate(reference, floating, update);
 

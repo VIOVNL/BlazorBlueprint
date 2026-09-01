@@ -84,6 +84,13 @@ public abstract class FormFieldBase : ComponentBase, IDisposable
     [Parameter]
     public string? AriaLabel { get; set; }
 
+    /// <summary>
+    /// Stable field identity used by accessibility/e2e tooling. When omitted,
+    /// the bound member name, ARIA label, or visible label is used.
+    /// </summary>
+    [Parameter]
+    public string? FieldId { get; set; }
+
     [CascadingParameter]
     private EditContext? CascadedEditContext { get; set; }
 
@@ -124,6 +131,11 @@ public abstract class FormFieldBase : ComponentBase, IDisposable
     protected virtual string? DescribedById => IsInvalid
         ? ErrorId
         : !string.IsNullOrEmpty(HelperText) ? DescriptionId : null;
+
+    protected string? EffectiveFieldId =>
+        !string.IsNullOrWhiteSpace(FieldId) ? FieldId :
+        _fieldIdentifier?.FieldName ??
+        (!string.IsNullOrWhiteSpace(AriaLabel) ? AriaLabel : Label);
 
     // --- Abstract Members ---
 
