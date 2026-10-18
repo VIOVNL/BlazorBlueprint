@@ -58,6 +58,13 @@ public partial class BbFormFieldTextarea : FormFieldBase
     public string? Name { get; set; }
 
     /// <summary>
+    /// Gets or sets the autocomplete hint passed to the underlying textarea.
+    /// Null inherits the owning form's policy.
+    /// </summary>
+    [Parameter]
+    public string? Autocomplete { get; set; }
+
+    /// <summary>
     /// Gets or sets the placeholder text.
     /// </summary>
     [Parameter]

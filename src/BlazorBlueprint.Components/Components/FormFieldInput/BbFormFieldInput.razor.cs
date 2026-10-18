@@ -156,6 +156,13 @@ public partial class BbFormFieldInput<TValue> : FormFieldBase
     public string? Name { get; set; }
 
     /// <summary>
+    /// Gets or sets the autocomplete hint passed to the underlying input.
+    /// Null inherits the owning form's policy.
+    /// </summary>
+    [Parameter]
+    public string? Autocomplete { get; set; }
+
+    /// <summary>
     /// Gets whether the form field currently has an error.
     /// </summary>
     public bool HasError => _hasError;

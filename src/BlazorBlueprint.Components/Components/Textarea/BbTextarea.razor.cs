@@ -195,6 +195,12 @@ public partial class BbTextarea : ComponentBase
     public string? Name { get; set; }
 
     /// <summary>
+    /// Gets or sets the browser's autocomplete hint. Null inherits the owning form's policy.
+    /// </summary>
+    [Parameter]
+    public string? Autocomplete { get; set; }
+
+    /// <summary>
     /// Gets or sets an expression that identifies the bound value.
     /// </summary>
     [Parameter]
