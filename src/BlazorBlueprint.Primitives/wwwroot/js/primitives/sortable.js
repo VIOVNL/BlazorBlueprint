@@ -6,6 +6,7 @@ let sortableLib = null;
 
 /** @type {Map<string, any>} */
 const instances = new Map();
+const snapshots = new Map();
 
 /**
  * Lazily load the Sortable ESM library.
@@ -38,30 +39,53 @@ async function loadSortable() {
  * Create a static visual clone of a container, positioned exactly over it,
  * so the real container can be reverted invisibly underneath.
  * @param {HTMLElement} container
- * @returns {HTMLElement} The overlay element — call .remove() to clean up.
+ * @returns {{remove: () => void}} Idempotent snapshot cleanup.
  */
 function freezeSnapshot(container) {
+  snapshots.get(container.id)?.remove();
+  const parent = container.parentElement;
   const rect = container.getBoundingClientRect();
+  const parentRect = parent.getBoundingClientRect();
+  const position = parent.style.position;
+  const visibility = container.style.visibility;
+  if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
+
+  // Keep the copy inside the same styled and scrolling ancestors. Moving it
+  // to body loses contextual styles and lets long lists escape their viewport.
   const clone = container.cloneNode(true);
   clone.removeAttribute('id');
-  clone.style.cssText = `
-    position: fixed;
-    top: ${rect.top}px;
-    left: ${rect.left}px;
-    width: ${rect.width}px;
-    height: ${rect.height}px;
-    z-index: 10000;
-    pointer-events: none;
-    margin: 0;
-  `;
-  document.body.appendChild(clone);
+  clone.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+  clone.setAttribute('aria-hidden', 'true');
+  clone.inert = true;
+  Object.assign(clone.style, {
+    position: 'absolute',
+    top: `${rect.top - parentRect.top - parent.clientTop + parent.scrollTop}px`,
+    left: `${rect.left - parentRect.left - parent.clientLeft + parent.scrollLeft}px`,
+    width: `${rect.width}px`, height: `${rect.height}px`, boxSizing: 'border-box',
+    zIndex: '1', pointerEvents: 'none', margin: '0', visibility: 'visible'
+  });
+  // Sortable's temporary animation transforms are relative to the live items.
+  // A frozen copy must show the final order, not replay those offsets.
+  for (const item of clone.children) {
+    item.style.transform = 'none'; item.style.transition = 'none';
+    item.classList.remove('sortable-ghost', 'sortable-chosen', 'sortable-drag');
+  }
+  parent.appendChild(clone);
+  clone.scrollTop = container.scrollTop; clone.scrollLeft = container.scrollLeft;
   container.style.visibility = 'hidden';
-  return {
+  let removed = false;
+  const snapshot = {
     remove() {
-      container.style.visibility = '';
+      if (removed) return;
+      removed = true;
+      container.style.visibility = visibility;
+      parent.style.position = position;
       clone.remove();
+      if (snapshots.get(container.id) === snapshot) snapshots.delete(container.id);
     }
   };
+  snapshots.set(container.id, snapshot);
+  return snapshot;
 }
 
 /**
@@ -121,7 +145,8 @@ export async function init(id, group, pull, put, sort, handle, filter, component
       event.to.insertBefore(event.item, event.to.children[event.oldIndex]);
 
       component.invokeMethodAsync('OnUpdateJS', event.oldDraggableIndex, event.newDraggableIndex)
-        .then(() => { snapshot.remove(); });
+        .finally(() => { snapshot.remove(); })
+        .catch(error => { console.error('Sortable update failed.', error); });
     },
     onRemove: (event) => {
       if (event.pullMode === 'clone') {
@@ -134,7 +159,8 @@ export async function init(id, group, pull, put, sort, handle, filter, component
       event.from.insertBefore(event.item, event.from.childNodes[event.oldIndex]);
 
       component.invokeMethodAsync('OnRemoveJS', event.oldDraggableIndex, event.newDraggableIndex)
-        .then(() => { snapshot.remove(); });
+        .finally(() => { snapshot.remove(); })
+        .catch(error => { console.error('Sortable update failed.', error); });
     },
     onAdd: (event) => {
       const snapshot = freezeSnapshot(event.to);
@@ -142,7 +168,8 @@ export async function init(id, group, pull, put, sort, handle, filter, component
       event.item.remove();
 
       component.invokeMethodAsync('OnAddJS', event.oldDraggableIndex, event.newDraggableIndex)
-        .then(() => { snapshot.remove(); });
+        .finally(() => { snapshot.remove(); })
+        .catch(error => { console.error('Sortable update failed.', error); });
     }
   });
 
@@ -154,6 +181,7 @@ export async function init(id, group, pull, put, sort, handle, filter, component
  * @param {string} id - Element ID
  */
 export function destroy(id) {
+  snapshots.get(id)?.remove();
   const sortable = instances.get(id);
   if (sortable) {
     sortable.destroy();
