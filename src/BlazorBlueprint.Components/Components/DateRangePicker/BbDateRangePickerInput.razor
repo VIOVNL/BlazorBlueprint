@@ -1,4 +1,5 @@
 @namespace BlazorBlueprint.Components
+@inject IBbLocalizer Localizer
 @using BlazorBlueprint.Icons.Lucide.Components
 @using BlazorBlueprint.Primitives.Utilities
 
@@ -10,7 +11,7 @@
            aria-label="@StartLabel"
            disabled="@Disabled"
            @onchange="HandleStartChange" />
-    <span class="shrink-0 text-muted-foreground" aria-hidden="true">to</span>
+    <span class="shrink-0 text-muted-foreground" aria-hidden="true">@Localizer["DateRangePicker.To"]</span>
     <input type="text"
            class="min-w-0 flex-1 bg-transparent px-3 py-2 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
            value="@EndText"
@@ -20,7 +21,7 @@
            @onchange="HandleEndChange" />
     <button type="button"
             class="@ToggleCssClass"
-            aria-label="Open date range calendar"
+            aria-label="@Localizer["DateRangePicker.OpenCalendar"]"
             aria-haspopup="@TriggerContext?.AriaHasPopup"
             aria-expanded="@(TriggerContext?.IsOpen == true ? "true" : "false")"
             aria-controls="@TriggerContext?.AriaControls"

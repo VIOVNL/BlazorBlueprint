@@ -214,7 +214,7 @@
                                                                       Size="ButtonSize.Icon"
                                                                       Class="@ClassNames.cn("w-7 h-7 transition-colors",
                                                                           hasActiveFilter ? "text-primary" : "text-muted-foreground opacity-0 group-hover/header:opacity-100")"
-                                                                      AriaLabel="@($"Filter {filterColumn.Title}")">
+                                                                      AriaLabel="@Localizer["DataGrid.FilterPlaceholder", filterColumn.Title ?? string.Empty]">
                                                                 <LucideIcon Name="filter" Class="w-3.5 h-3.5" />
                                                             </BbButton>
                                                         </BbPopoverTrigger>

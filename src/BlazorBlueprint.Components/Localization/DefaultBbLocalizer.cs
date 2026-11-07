@@ -21,6 +21,7 @@ public class DefaultBbLocalizer : IBbLocalizer
     {
         // Alert
         ["Alert.Dismiss"] = "Dismiss",
+        ["Spinner.Loading"] = "Loading",
 
         // Breadcrumb
         ["Breadcrumb.Breadcrumb"] = "breadcrumb",
@@ -131,6 +132,8 @@ public class DefaultBbLocalizer : IBbLocalizer
 
         // DateRangePicker
         ["DateRangePicker.Placeholder"] = "Select date range",
+        ["DateRangePicker.To"] = "to",
+        ["DateRangePicker.OpenCalendar"] = "Open date range calendar",
         ["DateRangePicker.QuickSelect"] = "Quick Select",
         ["DateRangePicker.SelectEndDate"] = "Select end date",
         ["DateRangePicker.DaysSelected"] = "{0} day(s) selected",
